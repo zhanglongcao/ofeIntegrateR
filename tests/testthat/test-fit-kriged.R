@@ -46,6 +46,26 @@ test_that("fit_integrated_kriged (engine = 'asreml') requires the asreml package
   )
 })
 
+test_that("fit_integrated_kriged (engine = 'gls') returns sensible treatment contrasts", {
+  skip_if_not_installed("nlme")
+  sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_treat = 3,
+                             treat_effects = c(0, 0.8, 1.6),
+                             n_point_samples = 25, seed = 11)
+  krieged <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+
+  fit <- fit_integrated_kriged(krieged, response = "dense_response",
+                                treat = "treat", covariate = "point_obs_kriged",
+                                row = "row", col = "col", engine = "gls")
+  expect_s3_class(fit, "gls")
+
+  fx <- extract_fixed_effects(fit)
+  b_est <- fx$estimate[fx$term == "treatB"]
+  c_est <- fx$estimate[fx$term == "treatC"]
+  expect_true(is.finite(b_est) && is.finite(c_est))
+  expect_gt(b_est, 0)
+  expect_gt(c_est, b_est)
+})
+
 test_that("fit_integrated_kriged (engine = 'asreml') runs when asreml is available", {
   skip_if_not_installed("asreml")
   sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_treat = 3,

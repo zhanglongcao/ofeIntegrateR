@@ -12,6 +12,7 @@ fit_integrated_joint(
   treat = "treat",
   row = "row",
   col = "col",
+  engine = c("asreml", "sommer"),
   cor_structure = c("independent", "unstructured"),
   min_point_n_for_us = 30,
   maxit = 60,
@@ -40,20 +41,31 @@ The treatment effect is estimated from the dense layer only.}
 \item{row, col}{Character; names of the row/column position columns,
 shared between \code{grid} and \code{point_samples}.}
 
+\item{engine}{Character; \code{"asreml"} (default) fits the model via
+\code{\link[asreml:asreml]{asreml::asreml()}} — requires a licensed copy of asreml-R. \code{"sommer"}
+fits an open-source (CRAN-only, no licence required) analogue via
+\code{\link[sommer:mmer]{sommer::mmer()}}: the dense and point-source responses are modelled as
+two traits in a multi-trait model sharing a random effect per grid
+location (\code{vsr(unit, Gtc = ...)}), with the treatment effect estimated
+separately for each trait (only the dense-trait estimate is
+meaningful; see Details).}
+
 \item{cor_structure}{Character; \code{"independent"} (default) fits
-\code{diag(layer):id(unit)}, i.e. separate spatial variances for the dense
-and point-source layers with no cross-covariance — robust when point
-samples are sparse. \code{"unstructured"} fits \code{us(layer):id(unit)}, which
-additionally estimates the spatial cross-covariance between layers
-(how strongly point-source spatial pattern informs the dense
-response), but is often unidentifiable below \code{min_point_n_for_us}
-observations.}
+\code{diag(layer):id(unit)} (asreml) or \code{vsr(unit, Gtc = diag(2))} (sommer),
+i.e. separate spatial variances for the dense and point-source layers
+with no cross-covariance — robust when point samples are sparse.
+\code{"unstructured"} fits \code{us(layer):id(unit)} (asreml) or
+\code{vsr(unit, Gtc = unsm(2))} (sommer), which additionally estimates the
+spatial cross-covariance between layers (how strongly point-source
+spatial pattern informs the dense response), but is often
+unidentifiable below \code{min_point_n_for_us} observations.}
 
 \item{min_point_n_for_us}{Integer; minimum number of non-missing
 point-source observations below which a warning is issued when
 \code{cor_structure = "unstructured"}.}
 
-\item{maxit}{Maximum number of asreml iterations.}
+\item{maxit}{Maximum number of asreml iterations. Ignored when
+\code{engine = "sommer"}.}
 
 \item{ai_sing}{Logical; if \code{TRUE} (default), temporarily set the
 session-level \code{asreml.options(ai.sing = TRUE)} for the duration of
@@ -61,14 +73,17 @@ this fit (restored to its previous value on exit), so that
 singularities in the Average Information matrix do not abort
 estimation. In testing, the layer-sharing random effect (even with
 \code{cor_structure = "independent"}) can trigger this with sparse
-point-source data, so it is enabled by default.}
+point-source data, so it is enabled by default. Ignored when
+\code{engine = "sommer"}.}
 
-\item{...}{Additional arguments passed to \code{\link[asreml:asreml]{asreml::asreml()}}.}
+\item{...}{Additional arguments passed to \code{\link[asreml:asreml]{asreml::asreml()}} or
+\code{\link[sommer:mmer]{sommer::mmer()}}.}
 }
 \value{
-A fitted \code{asreml} model object. Treatment contrasts for the
-dense layer can be retrieved with \code{\link[=extract_fixed_effects]{extract_fixed_effects()}} (look for
-terms matching \verb{at(layer, "dense"):<treat>}).
+A fitted \code{asreml} or \code{mmer} model object. Treatment contrasts
+for the dense layer can be retrieved with \code{\link[=extract_fixed_effects]{extract_fixed_effects()}}
+(look for terms matching \verb{at(layer, "dense"):<treat>} for asreml, or
+\verb{<response_dense>:<treat><level>} for sommer).
 }
 \description{
 Implements the "joint model" data integration strategy: rather than
@@ -80,13 +95,27 @@ point samples directly inform the dense response's spatial structure
 (and vice versa) without a separate kriging step.
 }
 \details{
-Residuals are modelled with \code{dsum(~units | layer)}, i.e. separate i.i.d.
-residual variances per layer. An \code{ar1(row):ar1(col)} residual was found
-to be unidentifiable for the point-source layer in testing, because a
-handful of sparse, irregularly placed observations cannot support a
-full spatial autocorrelation structure on their own; the shared random
-effect (\code{diag(layer)} or \code{us(layer)}) is what carries spatial
-information between layers instead.
+For \code{engine = "asreml"}, residuals are modelled with
+\code{dsum(~units | layer)}, i.e. separate i.i.d. residual variances per
+layer. An \code{ar1(row):ar1(col)} residual was found to be unidentifiable
+for the point-source layer in testing, because a handful of sparse,
+irregularly placed observations cannot support a full spatial
+autocorrelation structure on their own; the shared random effect
+(\code{diag(layer)} or \code{us(layer)}) is what carries spatial information
+between layers instead.
+
+For \code{engine = "sommer"}, the same idea is expressed as a multi-trait
+model (\code{cbind(dense, point) ~ treat}) with a shared random effect per
+grid location (\code{unit}) and heterogeneous, uncorrelated residual
+variances per trait (\code{vsr(units, Gtc = diag(2))}). sommer estimates the
+treatment effect separately for \emph{each} trait by default; the
+point-source trait's treatment estimate is not meaningful (point
+samples carry no treatment information of their own) and should be
+ignored — only the dense-trait estimate is the quantity of interest.
+Rows are kept even when only one of the two responses is observed via
+\code{naMethodY = "include"}. In testing against simulated data, this
+sommer-based fit reproduced the asreml \code{cor_structure = "independent"}
+treatment-contrast estimates almost exactly.
 }
 \examples{
 if (requireNamespace("asreml", quietly = TRUE)) {
@@ -94,6 +123,18 @@ if (requireNamespace("asreml", quietly = TRUE)) {
   fit <- fit_integrated_joint(sim$grid, sim$point_samples,
                                response_dense = "dense_response",
                                response_point = "point_obs")
+  extract_fixed_effects(fit)
+}
+
+if (requireNamespace("sommer", quietly = TRUE)) {
+  # sommer's multi-trait model needs more point-source observations than
+  # asreml's to avoid a singular system; a sparser grid like the asreml
+  # example above is not guaranteed to converge.
+  sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_point_samples = 25, seed = 11)
+  fit <- fit_integrated_joint(sim$grid, sim$point_samples,
+                               response_dense = "dense_response",
+                               response_point = "point_obs",
+                               engine = "sommer")
   extract_fixed_effects(fit)
 }
 

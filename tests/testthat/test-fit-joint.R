@@ -23,6 +23,26 @@ test_that("fit_integrated_joint warns when too few points for cor_structure = 'u
   )
 })
 
+test_that("fit_integrated_joint (engine = 'sommer') returns sensible treatment contrasts", {
+  skip_if_not_installed("sommer")
+  sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_treat = 3,
+                             treat_effects = c(0, 0.8, 1.6),
+                             n_point_samples = 25, seed = 11)
+  fit <- fit_integrated_joint(sim$grid, sim$point_samples,
+                               response_dense = "dense_response",
+                               response_point = "point_obs",
+                               engine = "sommer")
+  expect_s3_class(fit, "mmer")
+
+  fx <- extract_fixed_effects(fit)
+  b_est <- fx$estimate[fx$term == "dense_response:treatB"]
+  c_est <- fx$estimate[fx$term == "dense_response:treatC"]
+  expect_length(b_est, 1)
+  expect_length(c_est, 1)
+  expect_true(is.finite(b_est) && is.finite(c_est))
+  expect_gt(c_est, b_est)
+})
+
 test_that("fit_integrated_joint (cor_structure = 'independent') returns sensible treatment contrasts", {
   skip_if_not_installed("asreml")
   sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_treat = 3,

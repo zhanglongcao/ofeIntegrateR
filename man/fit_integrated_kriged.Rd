@@ -11,7 +11,7 @@ fit_integrated_kriged(
   covariate,
   row = "row",
   col = "col",
-  engine = c("asreml", "lm"),
+  engine = c("asreml", "gls", "lm"),
   ...
 )
 }
@@ -28,21 +28,24 @@ yield).}
 column (e.g. the \verb{*_kriged} column produced by \code{\link[=krige_point_samples]{krige_point_samples()}}).}
 
 \item{row, col}{Character; names of the row/column position columns used
-to build the AR1xAR1 spatial residual structure. Ignored when
-\code{engine = "lm"}.}
+to build the spatial residual structure. Ignored when \code{engine = "lm"}.}
 
 \item{engine}{Character; \code{"asreml"} (default) fits
 \code{response ~ treat + covariate} with an \code{ar1(row):ar1(col)} residual via
-\code{\link[asreml:asreml]{asreml::asreml()}}. \code{"lm"} fits the same fixed-effects model via
-\code{\link[stats:lm]{stats::lm()}} with no spatial residual structure — useful when asreml
-is not installed, but does not account for residual spatial
-autocorrelation.}
+\code{\link[asreml:asreml]{asreml::asreml()}} — requires a licensed copy of asreml-R. \code{"gls"} fits
+the same fixed-effects model via \code{\link[nlme:gls]{nlme::gls()}} with an exponential
+spatial correlation structure (\code{\link[nlme:corExp]{nlme::corExp()}} on \code{row}/\code{col}) — an
+open-source (CRAN-only, no licence required) alternative that still
+accounts for residual spatial autocorrelation. \code{"lm"} fits the same
+fixed-effects model via \code{\link[stats:lm]{stats::lm()}} with no spatial residual
+structure at all — the simplest fallback, but does not account for
+residual spatial autocorrelation.}
 
 \item{...}{Additional arguments passed to \code{\link[asreml:asreml]{asreml::asreml()}} (e.g.
-\code{maxit}) or \code{\link[stats:lm]{stats::lm()}}.}
+\code{maxit}), \code{\link[nlme:gls]{nlme::gls()}}, or \code{\link[stats:lm]{stats::lm()}}.}
 }
 \value{
-The fitted model object (class \code{asreml} or \code{lm}). Use
+The fitted model object (class \code{asreml}, \code{gls}, or \code{lm}). Use
 \code{\link[=extract_fixed_effects]{extract_fixed_effects()}} to retrieve a tidy table of fixed-effect
 estimates, including the treatment contrasts.
 }
