@@ -1,0 +1,30 @@
+Package: ofeIntegrateR
+Title: Integrate Point-Source and High-Resolution Spatial Data in On-Farm Experiments
+Version: 0.0.0.9000
+Authors@R:
+    person("Zhanglong", "Cao", , "jeromecy@gmail.com", role = c("aut", "cre"))
+Description: Tools for designing cost-effective spatial sampling strategies
+    and integrating sparse point-source measurements (e.g. soil cores, plant
+    samples) with dense spatial covariates (e.g. EM38 surveys, yield maps) in
+    on-farm experimentation (OFE) strip trials. Implements two integration
+    strategies: a kriged-covariate approach (krige sparse point samples,
+    then fit a spatial mixed model with the kriged surface as a fixed
+    covariate) and a joint bivariate spatial model (point samples and
+    high-resolution measurements modelled jointly via a shared spatial
+    random effect). Developed for the AAGI-CU-RD-OFE GRDC project.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1.0)
+Imports:
+    gstat,
+    sp,
+    stats
+Suggests:
+    asreml,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+URL: https://github.com/jeromecy/ofeIntegrateR
+BugReports: https://github.com/jeromecy/ofeIntegrateR/issues
