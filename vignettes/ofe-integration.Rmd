@@ -1,0 +1,200 @@
+---
+title: "Integrating point-source data with a yield map"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Integrating point-source data with a yield map}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+set.seed(2026)
+```
+
+An on-farm experiment usually produces two kinds of data. A **dense layer** —
+yield monitor, EM38, NDVI — covers the whole trial at low marginal cost but
+measures the outcome rather than its cause. A **point-source layer** — soil
+cores, tissue tests, disease counts — carries direct agronomic meaning but is
+expensive, so a trial can afford only tens of observations.
+
+This vignette walks through combining them to estimate a treatment effect. Every
+step runs on open-source engines; ASReml-R is used automatically when licensed
+but is never required.
+
+```{r}
+library(ofeIntegrateR)
+```
+
+## The starting point: data as a real trial produces it
+
+Yield-monitor data are not a tidy grid. They arrive as a cloud of
+GPS-referenced pings along harvester passes, with position error, and the
+paddock is rarely a rectangle. Here we simulate that shape so the workflow is
+the one you would actually run.
+
+```{r}
+# Harvester passes 4 m apart, pings ~1 m apart along each pass
+pass_y <- rep(seq(2, 58, by = 4), each = 100)
+cloud <- data.frame(
+  x = rep(seq(1, 99, length.out = 100), times = length(unique(pass_y))),
+  y = pass_y + rnorm(length(pass_y), 0, 0.3)          # GPS jitter
+)
+
+# Three treatment strips across the paddock
+cloud$treat <- cut(cloud$x, breaks = c(0, 33, 66, 100), labels = c("A", "B", "C"))
+
+# A spatially structured soil property that partly drives yield
+soil <- as.vector(scale(with(cloud, sin(x / 18) + cos(y / 12) + rnorm(nrow(cloud), 0, 0.3))))
+cloud$yield <- c(A = 0, B = 0.8, C = 1.6)[as.character(cloud$treat)] +
+  0.6 * soil + rnorm(nrow(cloud), 0, 0.4)
+
+nrow(cloud)
+head(cloud, 3)
+```
+
+The true treatment contrast we are trying to recover is **C − A = 1.6**.
+
+## Step 1 — put the dense layer on an estimable lattice
+
+Spatial mixed models with a separable AR1 residual need a complete rectangular
+lattice. `grid_dense_layer()` snaps the cloud onto one, averages within cells,
+and — importantly — keeps cells that contain no observations, as missing values
+rather than dropped rows.
+
+```{r}
+g <- grid_dense_layer(cloud, response = "yield", treat = "treat", cell_size = 5)
+
+dim(g)
+table(empty_cells = g$n_obs == 0)
+summary(g$n_obs[g$n_obs > 0])
+```
+
+Two columns are worth checking before going further.
+
+`n_obs` is how many pings support each cell. Cells resting on one or two noisy
+pings can be blanked with `n_min`:
+
+```{r}
+g_strict <- grid_dense_layer(cloud, response = "yield", treat = "treat",
+                             cell_size = 5, n_min = 3)
+sum(is.na(g_strict$yield))
+```
+
+`treat_purity` is the share of a cell's observations belonging to its assigned
+treatment. Cells straddling a strip boundary are ambiguous and are usually
+excluded:
+
+```{r}
+table(pure = g$treat_purity == 1, useNA = "ifany")
+
+# Exclude boundary cells but keep the lattice complete
+g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
+```
+
+## Step 2 — krige the point samples onto the same grid
+
+A real trial samples wherever the sampler could reach, not at cell centres.
+`krige_point_samples()` fits a variogram and predicts onto the grid, so the
+sparse layer becomes a covariate defined everywhere.
+
+```{r}
+# 30 soil cores at arbitrary locations
+idx <- sample(nrow(cloud), 30)
+cores <- data.frame(x = cloud$x[idx], y = cloud$y[idx],
+                    soil_n = soil[idx] + rnorm(30, 0, 0.3))
+
+# Kriging works in the coordinate system of both layers
+g$x <- g$x_centre
+g$y <- g$y_centre
+kr <- krige_point_samples(cores, g, value = "soil_n", coords = c("x", "y"))
+
+names(kr)[grepl("soil_n", names(kr))]
+attr(kr, "variogram")
+```
+
+Always look at the fitted variogram. A range far larger than the trial, or a
+nugget close to the sill, means the surface is not being estimated and the
+covariate will carry little information.
+
+## Step 3 — fit the baseline first, then the integrated model
+
+The estimate to beat is **the dense layer analysed on its own with a spatial
+residual**. It costs nothing and requires no sampling, so it is the honest
+comparator for anything that does.
+
+```{r}
+# covariate = NULL is the dense-layer-only baseline
+baseline <- fit_integrated_kriged(kr, response = "yield", treat = "treat",
+                                  covariate = NULL, engine = "gls")
+
+integrated <- fit_integrated_kriged(kr, response = "yield", treat = "treat",
+                                    covariate = "soil_n_kriged", engine = "gls")
+```
+
+`extract_fixed_effects()` gives a tidy table regardless of which engine fitted
+the model, so downstream code does not need to change when a licence appears or
+disappears.
+
+```{r}
+contrast_C <- function(fit) {
+  fx <- extract_fixed_effects(fit)
+  fx[grepl("treatC$", fx$term), c("term", "estimate", "se")]
+}
+
+rbind(baseline = contrast_C(baseline),
+      integrated = contrast_C(integrated))
+```
+
+Compare both against the truth of 1.6. Report both in your write-up: the
+difference between them is exactly what the sampling bought.
+
+## Integrating more than one point variable
+
+Pass several kriged surfaces and they all enter the model:
+
+```{r, eval = FALSE}
+fit_integrated_kriged(kr, response = "yield", treat = "treat",
+                      covariate = c("soil_n_kriged", "soil_p_kriged"),
+                      engine = "gls")
+```
+
+## Choosing an engine
+
+| `engine` | Spatial residual | Licence |
+|---|---|---|
+| `"asreml"` | `ar1(row):ar1(col)` | commercial |
+| `"gls"` | exponential, via `nlme::gls()` | open source |
+| `"lm"` | none | open source |
+
+`"gls"` is the open-source workhorse. `"lm"` ignores spatial correlation
+entirely and is best kept as a diagnostic reference rather than a final model.
+
+## When integration is not worth it
+
+Simulation work behind this package (GRDC project AAGI-CU-RD-OFE, Milestone 4)
+found the benefit is real but conditional. Three findings are worth carrying
+into planning:
+
+- **Sample count matters, and thirty is a floor rather than a target.** On
+  idealised lattices thirty samples were enough; on realistic trial geometry the
+  same thirty bought very little, because averaging many yield pings per cell
+  already makes the baseline accurate.
+- **Short-range variation defeats it.** Where the point variable decorrelates
+  over a distance comparable to the grid cell, no affordable number of samples
+  reconstructs the surface. Check the fitted variogram range against your cell
+  size before committing.
+- **A significant covariate is not evidence that integration helped.** With
+  hundreds of grid cells the kriged covariate clears `|t| > 2` almost
+  automatically. Judge the method by comparing treatment contrasts against the
+  baseline, not by the covariate's p-value.
+
+## The joint bivariate model
+
+`fit_integrated_joint()` models the dense and point layers together with a
+shared spatial random effect, estimating their cross-covariance instead of
+treating the kriged surface as known. It is the right choice when that
+covariance is itself of interest, but it needs an unstructured cross-covariance
+to inform the treatment effect at all, and that is hard to estimate from sparse
+point data. For routine treatment-effect work the kriged-covariate route is the
+dependable default.

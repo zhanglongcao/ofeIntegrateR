@@ -8,7 +8,7 @@ fit_integrated_kriged(
   data,
   response,
   treat,
-  covariate,
+  covariate = NULL,
   row = "row",
   col = "col",
   engine = c("asreml", "gls", "lm"),
@@ -24,8 +24,13 @@ yield).}
 
 \item{treat}{Character; name of the treatment factor column.}
 
-\item{covariate}{Character; name of the kriged point-source covariate
-column (e.g. the \verb{*_kriged} column produced by \code{\link[=krige_point_samples]{krige_point_samples()}}).}
+\item{covariate}{Character vector; name(s) of the kriged point-source
+covariate column(s) (e.g. the \verb{*_kriged} columns produced by
+\code{\link[=krige_point_samples]{krige_point_samples()}}). Supply several names to integrate more than one
+point variable at once, such as soil nitrogen and phosphorus. Use
+\code{NULL} to fit the treatment model with no point-source covariate at all:
+this is the baseline that an integrated analysis has to beat, since it
+uses only the dense layer and costs no sampling.}
 
 \item{row, col}{Character; names of the row/column position columns used
 to build the spatial residual structure. Ignored when \code{engine = "lm"}.}

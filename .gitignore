@@ -2,5 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
 *.Rcheck/
 *.tar.gz
+# knitr artefacts from building vignettes locally
+/doc/
+/Meta/
+vignettes/*.R
+vignettes/*.html

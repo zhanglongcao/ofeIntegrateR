@@ -86,3 +86,54 @@ test_that("fit_integrated_kriged (engine = 'asreml') runs when asreml is availab
   expect_length(c_est, 1)
   expect_true(is.finite(b_est) && is.finite(c_est))
 })
+
+test_that("several covariates all enter the model (none silently dropped)", {
+  sim <- simulate_ofe_trial(n_row = 20, n_col = 9, n_point_samples = 15, seed = 42)
+  g <- sim$grid
+  set.seed(42)
+  g$soil_n <- stats::rnorm(nrow(g))
+  g$soil_p <- stats::rnorm(nrow(g))
+
+  fit1 <- fit_integrated_kriged(g, "dense_response", "treat", "soil_n",
+                                engine = "lm")
+  fit2 <- fit_integrated_kriged(g, "dense_response", "treat",
+                                c("soil_n", "soil_p"), engine = "lm")
+
+  expect_true("soil_n" %in% names(stats::coef(fit1)))
+  expect_false("soil_p" %in% names(stats::coef(fit1)))
+
+  # Both covariates must be present when both are requested.
+  expect_true(all(c("soil_n", "soil_p") %in% names(stats::coef(fit2))))
+  expect_equal(length(attr(stats::terms(fit2), "term.labels")), 3L)
+})
+
+test_that("gls engine tolerates missing cells, as gridded trial data contain", {
+  sim <- simulate_ofe_trial(n_row = 14, n_col = 9, n_point_samples = 12, seed = 7)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+
+  # Empty cells and treatment-boundary cells arrive as NA from grid_dense_layer()
+  kr$dense_response[c(3, 17, 42)] <- NA_real_
+
+  expect_error(
+    fit <- fit_integrated_kriged(kr, "dense_response", "treat",
+                                 "point_obs_kriged", engine = "gls"),
+    NA)
+  fx <- extract_fixed_effects(fit)
+  expect_true(any(grepl("treatC$", fx$term)))
+  expect_true(all(is.finite(fx$estimate)))
+})
+
+test_that("covariate = NULL fits the dense-layer-only baseline on every engine", {
+  sim <- simulate_ofe_trial(n_row = 14, n_col = 9, n_point_samples = 12, seed = 3)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+
+  for (eng in c("lm", "gls")) {
+    fit <- fit_integrated_kriged(kr, "dense_response", "treat", covariate = NULL,
+                                 engine = eng)
+    fx <- extract_fixed_effects(fit)
+    expect_true(any(grepl("treatC$", fx$term)), info = eng)
+    # No covariate term should appear
+    expect_false(any(grepl("kriged", fx$term)), info = eng)
+    expect_true(all(is.finite(fx$estimate)), info = eng)
+  }
+})

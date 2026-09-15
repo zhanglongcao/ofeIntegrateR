@@ -12,8 +12,13 @@
 #' @param response Character; name of the dense response column (e.g.
 #'   yield).
 #' @param treat Character; name of the treatment factor column.
-#' @param covariate Character; name of the kriged point-source covariate
-#'   column (e.g. the `*_kriged` column produced by [krige_point_samples()]).
+#' @param covariate Character vector; name(s) of the kriged point-source
+#'   covariate column(s) (e.g. the `*_kriged` columns produced by
+#'   [krige_point_samples()]). Supply several names to integrate more than one
+#'   point variable at once, such as soil nitrogen and phosphorus. Use
+#'   `NULL` to fit the treatment model with no point-source covariate at all:
+#'   this is the baseline that an integrated analysis has to beat, since it
+#'   uses only the dense layer and costs no sampling.
 #' @param row,col Character; names of the row/column position columns used
 #'   to build the spatial residual structure. Ignored when `engine = "lm"`.
 #' @param engine Character; `"asreml"` (default) fits
@@ -49,7 +54,7 @@
 #' }
 #'
 #' @export
-fit_integrated_kriged <- function(data, response, treat, covariate,
+fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
                                    row = "row", col = "col",
                                    engine = c("asreml", "gls", "lm"), ...) {
   engine <- match.arg(engine)
@@ -60,7 +65,16 @@ fit_integrated_kriged <- function(data, response, treat, covariate,
          call. = FALSE)
   }
 
-  fixed <- stats::as.formula(paste(response, "~", treat, "+", covariate))
+  # `covariate` may name several kriged surfaces (e.g. soil N and P). Collapse
+  # them into one right-hand side: paste() vectorises, so without `collapse` the
+  # formula would be built from the first covariate only and the rest silently
+  # dropped. With no covariate this is the dense-layer-only baseline.
+  rhs <- if (length(covariate) == 0L) {
+    treat
+  } else {
+    paste(treat, "+", paste(covariate, collapse = " + "))
+  }
+  fixed <- stats::as.formula(paste(response, "~", rhs))
 
   if (engine == "lm") {
     return(stats::lm(fixed, data = data, ...))
@@ -69,12 +83,21 @@ fit_integrated_kriged <- function(data, response, treat, covariate,
   if (engine == "gls") {
     data$.row_num <- as.numeric(as.character(data[[row]]))
     data$.col_num <- as.numeric(as.character(data[[col]]))
-    return(nlme::gls(
-      fixed,
-      data = data,
-      correlation = nlme::corExp(form = ~ .row_num + .col_num, nugget = TRUE),
-      ...
-    ))
+    # Gridded trial data routinely contain empty cells and cells excluded for
+    # straddling a treatment boundary. `gls()` stops on missing values rather
+    # than dropping them, so omit incomplete rows unless the caller has said
+    # how to handle them. `gls()` uses actual coordinates rather than a
+    # complete lattice, so dropping rows is safe here (it is not for the
+    # separable AR1 residual used by the asreml engine, which keeps NA rows).
+    dots <- list(...)
+    if (is.null(dots$na.action)) dots$na.action <- stats::na.omit
+    return(do.call(nlme::gls, c(
+      list(model = fixed,
+           data = data,
+           correlation = nlme::corExp(form = ~ .row_num + .col_num,
+                                      nugget = TRUE)),
+      dots
+    )))
   }
 
   check_asreml()

@@ -1,7 +1,7 @@
 # ofeIntegrateR
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/jeromecy/ofeIntegrateR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/jeromecy/ofeIntegrateR/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/zhanglongcao/ofeIntegrateR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zhanglongcao/ofeIntegrateR/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 Tools for integrating sparse point-source measurements (e.g. soil cores,
@@ -33,15 +33,28 @@ with a licence:
   via `sommer::mmer()`. In testing, the sommer fit reproduced the asreml
   treatment-contrast estimates almost exactly.
 
+## Getting real data into the pipeline
+
+Yield-monitor and sensor data arrive as an irregular cloud of GPS-referenced
+observations along machinery passes, but a separable AR1 residual is defined
+only over a complete rectangular lattice. `grid_dense_layer()` is the entry
+point that bridges the two: it snaps the cloud onto a lattice of a chosen cell
+size, aggregates within cells, keeps empty cells as missing values so the
+lattice stays estimable, and reports the treatment purity of each cell so that
+cells straddling a strip boundary can be excluded.
+
 `simulate_ofe_trial()` generates synthetic test data for both strategies,
 and `extract_fixed_effects()` gives a model-agnostic way to pull
 treatment-contrast estimates out of an `lm`, `gls`, `asreml`, or `mmer` fit.
+
+Start with `vignette("ofe-integration", package = "ofeIntegrateR")` for an
+end-to-end walkthrough from raw yield-monitor points to a treatment contrast.
 
 ## Installation
 
 ```r
 # install.packages("remotes")
-remotes::install_github("jeromecy/ofeIntegrateR")
+remotes::install_github("zhanglongcao/ofeIntegrateR")
 ```
 
 Everything works out of the box with open-source dependencies only
@@ -61,11 +74,24 @@ sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_treat = 3,
                            treat_effects = c(0, 0.8, 1.6),
                            n_point_samples = 25, seed = 11)
 
+# With real data, start here instead: aggregate the irregular cloud first
+# grid <- grid_dense_layer(yield_points, response = "yield", treat = "treat",
+#                          cell_size = 9)
+
+# Always fit the baseline: the dense layer alone, no sampling cost.
+# This is the estimate an integrated analysis has to beat.
+baseline <- fit_integrated_kriged(sim$grid, response = "dense_response",
+                                   treat = "treat", covariate = NULL,
+                                   engine = "gls")
+
 # Strategy 1: krige the point-source variable, use it as a fixed covariate
 kriged <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
 fit_a <- fit_integrated_kriged(kriged, response = "dense_response",
                                 treat = "treat", covariate = "point_obs_kriged",
                                 engine = "gls")  # or "asreml" / "lm"
+
+# Compare the two: the difference is what the sampling bought
+extract_fixed_effects(baseline)
 extract_fixed_effects(fit_a)
 
 # Strategy 2: fit dense + point-source data jointly (no separate kriging step)
