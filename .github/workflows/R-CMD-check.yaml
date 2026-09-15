@@ -42,22 +42,29 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # 'asreml' is a commercial Suggests not available on any public
-          # repo; pak cannot resolve it, so we restrict the dependency
-          # install to hard deps (Imports/LinkingTo) and name the Suggests
-          # we actually need, rather than the default "all" (which includes
-          # asreml and would fail). knitr/rmarkdown build the vignette;
-          # sommer is needed by the joint-model tests.
+          # repo; pak cannot resolve it, so we install hard deps
+          # (Imports/LinkingTo) and name only the Suggests the check truly
+          # needs, rather than the default "all" (which would try asreml and
+          # fail). knitr/rmarkdown build the vignettes.
+          #
+          # 'sommer' and 'agridat' are deliberately NOT installed here.
+          # sommer compiles C++ and would have to build on all five matrix
+          # legs for the sake of one test that already calls
+          # skip_if_not_installed("sommer"); agridat is only needed by the
+          # real-data article, which is written to degrade gracefully when it
+          # is absent. Letting those guards do their job keeps the check fast
+          # and removes two ways for it to fail for reasons unrelated to the
+          # package.
           dependencies: 'c("Imports", "LinkingTo")'
           extra-packages: |
             any::rcmdcheck
             any::testthat
             any::knitr
             any::rmarkdown
-            any::sommer
-            any::agridat
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
+          upload-results: always
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'

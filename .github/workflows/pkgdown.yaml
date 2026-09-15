@@ -41,6 +41,7 @@ jobs:
             any::rmarkdown
             any::sommer
             any::agridat
+            local::.
           needs: website
 
       - name: Build site
