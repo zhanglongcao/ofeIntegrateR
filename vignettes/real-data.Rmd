@@ -1,0 +1,168 @@
+---
+title: "A worked example on real trial data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{A worked example on real trial data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+set.seed(2026)
+has_agridat <- requireNamespace("agridat", quietly = TRUE)
+knitr::opts_chunk$set(eval = has_agridat)
+```
+
+```{r, eval = !has_agridat, echo = FALSE, results = "asis"}
+cat("This article needs the **agridat** package, which is not installed.",
+    "Install it with `install.packages(\"agridat\")` to run the example.")
+```
+
+The other article uses simulated trials, where the truth is known. This one uses
+a real one, where it is not — and where the data arrive in the state real data
+arrive in.
+
+`agridat::lasrosas.corn` is an on-farm nitrogen experiment from Las Rosas,
+Córdoba, Argentina, recorded by a yield monitor. It has what this package is
+built for: GPS-referenced yield observations, a categorical treatment applied
+across the paddock, and an ancillary spatial layer.
+
+```{r}
+library(ofeIntegrateR)
+library(agridat)
+
+d <- subset(lasrosas.corn, year == 1999)
+str(d)
+```
+
+`yield` is in quintals per hectare, `nf` is the nitrogen treatment (six levels),
+`bv` is a brightness value from aerial imagery, and `topo` is a topographic
+class.
+
+## Project the coordinates first
+
+`grid_dense_layer()` works in the units of the coordinates it is given, so
+degrees of latitude and longitude will produce meaningless cell sizes. Project
+to metres before gridding. A local equirectangular approximation is accurate
+enough over a single paddock; use a proper projection (`sf::st_transform()`) for
+anything larger.
+
+```{r}
+lat0 <- mean(d$lat)
+lon0 <- mean(d$long)
+d$x <- (d$long - lon0) * 111320 * cos(lat0 * pi / 180)
+d$y <- (d$lat - lat0) * 110540
+
+round(c(width_m = diff(range(d$x)), height_m = diff(range(d$y))))
+nrow(d)
+```
+
+About 1,700 yield observations over a 660 m × 240 m block.
+
+## Choosing a cell size is a real decision
+
+The cell size trades two things against each other. Large cells average more
+yield observations, which suppresses monitor noise. Small cells are less likely
+to straddle a treatment boundary. `grid_dense_layer()` reports both sides of
+that trade-off, so it can be made on evidence rather than habit.
+
+```{r}
+sizes <- c(5, 8, 10, 15, 20)
+do.call(rbind, lapply(sizes, function(cs) {
+  g <- grid_dense_layer(d, x = "x", y = "y", response = "yield", treat = "nf",
+                        cell_size = cs)
+  data.frame(cell_m = cs,
+             cells = nrow(g),
+             with_data = sum(g$n_obs > 0),
+             median_obs = median(g$n_obs[g$n_obs > 0]),
+             pure = round(mean(g$treat_purity == 1, na.rm = TRUE), 2))
+}))
+```
+
+The collapse in purity above 8 m is informative: it says the treatment units in
+this trial are narrow. They are — all six nitrogen levels appear across the full
+extent of the block, so this is a randomised trial in small plots rather than a
+strip trial with wide contiguous strips.
+
+That points to a cell size of 5–8 m. We take 8 m and exclude the cells that
+still straddle a boundary.
+
+```{r}
+g <- grid_dense_layer(d, x = "x", y = "y", response = "yield", treat = "nf",
+                      cell_size = 8)
+
+# Carry the brightness layer onto the same lattice
+gb <- grid_dense_layer(d, x = "x", y = "y", response = "bv", cell_size = 8)
+g$bv <- gb$bv[match(paste(g$row, g$col), paste(gb$row, gb$col))]
+
+# Exclude ambiguous cells, keeping the lattice complete
+g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
+
+c(cells = nrow(g), usable = sum(!is.na(g$yield)))
+```
+
+## Standing in for a sparse sampling campaign
+
+This trial has no soil-core layer — `bv` was measured everywhere. To show the
+integration workflow we treat it as if it had been *sampled* at forty locations,
+the kind of budget a soil-coring campaign would have. This is a demonstration
+device: the surface being kriged is real, but the sparsity is imposed.
+
+```{r}
+obs <- which(!is.na(g$bv) & !is.na(g$yield))
+s <- sample(obs, 40)
+
+cores <- data.frame(x = g$x_centre[s], y = g$y_centre[s], bv_obs = g$bv[s])
+
+g$x <- g$x_centre
+g$y <- g$y_centre
+kr <- krige_point_samples(cores, g, value = "bv_obs", coords = c("x", "y"))
+```
+
+Is forty enough to reconstruct the surface?
+
+```{r}
+cv <- cv_krige_surface(cores, value = "bv_obs", coords = c("x", "y"))
+round(c(rmse = cv$rmse, r2 = cv$r2), 2)
+```
+
+A positive `r2` means kriging beats the sample mean, so the layer is worth
+carrying forward. Recall that this says the surface is *well estimated*, not
+that it is *relevant to yield*.
+
+## Baseline against integrated
+
+```{r}
+cmp <- compare_integration(kr, response = "yield", treat = "nf",
+                           covariate = "bv_obs_kriged", engine = "gls")
+
+cmp[grepl("^nf|bv", cmp$term), ]
+```
+
+Two things to read here.
+
+**The nitrogen response is clean.** The contrasts rise monotonically from N1 to
+N5 — a textbook response curve, recovered from irregular yield-monitor data that
+started as a GPS point cloud.
+
+**Integration changed almost nothing.** The treatment estimates barely move and
+`se_change` is negligible. On this trial, adding a forty-point brightness surface
+did not improve the treatment estimates, even though the surface itself was
+adequately estimated.
+
+That is not a failure of the method; it is the method working as intended. The
+dense yield layer, averaged over several observations per cell and spread across
+hundreds of cells, already estimates these contrasts well. A covariate has to
+earn its place against that, and here it did not. Simulation work behind this
+package found the same pattern whenever the baseline is strong — which is why
+`compare_integration()` reports both models rather than the integrated one
+alone.
+
+## What to take from this
+
+- Project your coordinates before gridding.
+- Choose the cell size from `n_obs` and `treat_purity`, not from convention.
+  Their trade-off is specific to your trial's plot geometry.
+- Expect integration to help when the baseline is weak, and to do little when it
+  is already strong. Report both so the difference is visible.

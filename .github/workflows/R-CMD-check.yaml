@@ -54,6 +54,7 @@ jobs:
             any::knitr
             any::rmarkdown
             any::sommer
+            any::agridat
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2

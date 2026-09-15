@@ -32,8 +32,14 @@ and `simulate_yield_monitor()` for the awkward shape a real harvester produces �
 GPS-referenced points along passes, position error, a clipped paddock corner and
 missing passes.
 
-Start with `vignette("ofe-integration", package = "ofeIntegrateR")` for an
-end-to-end walkthrough.
+Two articles:
+
+* `vignette("ofe-integration")` — an end-to-end walkthrough on simulated
+  trials, where the truth is known.
+* `vignette("real-data")` — the same workflow on
+  `agridat::lasrosas.corn`, an on-farm nitrogen experiment from Argentina
+  recorded by a yield monitor, where the data arrive in the state real data
+  arrive in.
 
 ## Two integration strategies
 

@@ -52,6 +52,14 @@ First release.
 * Added a pkgdown site (`_pkgdown.yml`) with the reference index organised by
   pipeline stage, and a workflow to publish it to GitHub Pages.
 
+* New article, `vignette("real-data")`: the full workflow on
+  `agridat::lasrosas.corn`, an on-farm nitrogen experiment recorded by a yield
+  monitor. It shows coordinate projection, choosing a cell size from `n_obs` and
+  `treat_purity` rather than by convention, and a case where integration
+  correctly turns out not to help — the point of reporting the baseline
+  alongside it. `agridat` is a Suggests, and the article degrades gracefully
+  when it is absent.
+
 * The R-CMD-check workflow now installs `knitr`, `rmarkdown` and `sommer`
   explicitly, so the vignette builds and the joint-model tests run in CI.
 

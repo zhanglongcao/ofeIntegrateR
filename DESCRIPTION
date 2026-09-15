@@ -28,6 +28,7 @@ Imports:
     sp,
     stats
 Suggests:
+    agridat,
     asreml,
     knitr,
     rmarkdown,
