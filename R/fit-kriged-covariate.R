@@ -1,3 +1,30 @@
+
+
+#' @keywords internal
+#' @noRd
+# asreml takes `random = ~ rep`; nlme::lme wants a grouping formula,
+# `~ 1 | rep`. Accepting the asreml spelling on both engines is the point of a
+# common interface, so translate rather than making the caller remember which
+# is which. A formula that already names a grouping factor is passed through.
+as_lme_random <- function(random) {
+  if (inherits(random, "formula") && length(random) == 2L) {
+    rhs <- random[[2]]
+    if (!(is.call(rhs) && identical(as.character(rhs[[1]]), "|"))) {
+      terms_chr <- attr(stats::terms(random), "term.labels")
+      if (length(terms_chr) == 0L) {
+        stop("`random` names no grouping factor.", call. = FALSE)
+      }
+      if (length(terms_chr) > 1L) {
+        stop("`engine = \"lme\"` needs the nesting made explicit for more ",
+             "than one grouping factor, e.g. random = ~ 1 | block/plot ",
+             "instead of ~ block + plot.", call. = FALSE)
+      }
+      return(stats::as.formula(paste("~ 1 |", terms_chr)))
+    }
+  }
+  random
+}
+
 #' Fit a treatment model using a kriged point-source covariate
 #'
 #' Implements the "kriged-covariate" data integration strategy: a sparse
@@ -62,29 +89,6 @@
 #' }
 #'
 #' @export
-# asreml takes `random = ~ rep`; nlme::lme wants a grouping formula,
-# `~ 1 | rep`. Accepting the asreml spelling on both engines is the point of a
-# common interface, so translate rather than making the caller remember which
-# is which. A formula that already names a grouping factor is passed through.
-as_lme_random <- function(random) {
-  if (inherits(random, "formula") && length(random) == 2L) {
-    rhs <- random[[2]]
-    if (!(is.call(rhs) && identical(as.character(rhs[[1]]), "|"))) {
-      terms_chr <- attr(stats::terms(random), "term.labels")
-      if (length(terms_chr) == 0L) {
-        stop("`random` names no grouping factor.", call. = FALSE)
-      }
-      if (length(terms_chr) > 1L) {
-        stop("`engine = \"lme\"` needs the nesting made explicit for more ",
-             "than one grouping factor, e.g. random = ~ 1 | block/plot ",
-             "instead of ~ block + plot.", call. = FALSE)
-      }
-      return(stats::as.formula(paste("~ 1 |", terms_chr)))
-    }
-  }
-  random
-}
-
 fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
                                    random = NULL,
                                    row = "row", col = "col",
