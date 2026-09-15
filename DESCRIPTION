@@ -1,21 +1,19 @@
 Package: ofeIntegrateR
-Title: Integrate Point-Source and High-Resolution Spatial Data in On-Farm Experiments
+Title: Design, Sample and Analyse On-Farm Strip Experiments
 Version: 0.1.0
 Authors@R:
     person("Zhanglong", "Cao", , "zhanglong.cao@curtin.edu.au", role = c("aut", "cre"))
-Description: Tools for designing cost-effective spatial sampling strategies
-    and integrating sparse point-source measurements (e.g. soil cores, plant
-    samples) with dense spatial covariates (e.g. EM38 surveys, yield maps) in
-    on-farm experimentation (OFE) strip trials. Implements two integration
-    strategies: a kriged-covariate approach (krige sparse point samples,
-    then fit a spatial mixed model with the kriged surface as a fixed
-    covariate) and a joint bivariate spatial model (point samples and
-    high-resolution measurements modelled jointly via a shared spatial
-    random effect). Irregular yield-monitor or sensor data are first
-    aggregated onto an estimable lattice, so the pipeline accepts raw
-    trial data rather than a pre-gridded response. Every step has an
-    open-source path requiring no commercial software licence.
-    Developed for the AAGI-CU-RD-OFE GRDC project.
+Description: A workflow for on-farm experimentation (OFE) strip trials,
+    from planning a trial to estimating its treatment effects. Lays out strip
+    and stacked designs with randomised or systematic treatment order; works
+    out how many point samples a target precision needs and where to put them;
+    aggregates irregular yield-monitor data onto an estimable lattice; and
+    estimates treatment effects, optionally integrating a sparse point-source
+    variable (soil cores, tissue tests) with the dense layer by a kriged
+    covariate or a joint bivariate spatial model. Every step has an
+    open-source path requiring no commercial software licence, with ASReml-R
+    used automatically where it is licensed. Developed for the AAGI-CU-RD-OFE
+    GRDC project.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

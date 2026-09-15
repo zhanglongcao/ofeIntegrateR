@@ -18,10 +18,20 @@ First release.
   sampling density can beat — which is often the more useful number, because it
   says whether the target is worth budgeting for at all.
 
-* `make_trial_grid()` lays out a planned trial as a lattice with treatment
-  strips, so sampling locations can be chosen before any yield data exist. Its
-  output has the same shape as `grid_dense_layer()`, so the same code works
-  before and after harvest.
+* `make_trial_design()` lays out the trial itself: treatment plots of a given
+  width and length in replicate blocks, as a `"strip"` layout (plots side by
+  side, each running the full length) or a `"stack"` layout (two tiers with a
+  buffer, halving the width). Treatment order within each block is randomised
+  or systematic — a real choice for strip trials, since under strong spatial
+  correlation a systematic arrangement can estimate contrasts more precisely.
+  The output has the same shape as `grid_dense_layer()`, so sampling locations
+  can be chosen from the plan before any yield data exist, and the same code
+  runs before and after harvest.
+
+* The package Title and Description now describe the whole workflow rather than
+  the integration step alone. Only four of its functions concern integration;
+  the rest design the trial, plan the sampling, prepare the data or simulate
+  trials, and the old title made that hard to see.
 
 * `cv_krige_surface()` cross-validates the kriged point-source surface, so a
   trial team can tell whether its point layer is dense enough to reconstruct

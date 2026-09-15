@@ -4,19 +4,24 @@ template:
   bootstrap: 5
 
 home:
-  title: Integrate point-source and high-resolution data in on-farm experiments
+  title: Design, sample and analyse on-farm strip experiments
   description: >
-    Combine sparse soil, tissue or disease samples with dense yield-monitor and
-    sensor layers to estimate treatment effects in on-farm experimentation strip
-    trials. Every step has an open-source path.
+    A workflow for OFE strip trials: lay out the design, plan the sampling,
+    grid the yield-monitor data, and estimate treatment effects — optionally
+    integrating sparse soil or tissue samples with the dense layer. Every step
+    has an open-source path.
 
 reference:
-- title: Planning the trial and the sample
+- title: Designing the trial
   desc: >
-    Before the season: lay out the trial, work out how many cores the target
-    precision needs, and choose where they go.
+    Lay out the plots: strip or stacked, randomised or systematic.
   contents:
-  - make_trial_grid
+  - make_trial_design
+
+- title: Planning the sample
+  desc: >
+    How many point samples the target precision needs, and where they go.
+  contents:
   - kriging_sample_interval
   - place_point_samples
 

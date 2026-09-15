@@ -4,9 +4,10 @@
 [![R-CMD-check](https://github.com/zhanglongcao/ofeIntegrateR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zhanglongcao/ofeIntegrateR/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-Tools for integrating sparse point-source measurements (e.g. soil cores,
-tissue samples, disease ratings) with dense spatial covariates (e.g. EM38
-surveys, yield maps) in on-farm experimentation (OFE) strip trials.
+A workflow for on-farm experimentation (OFE) strip trials, from planning a
+trial to estimating its treatment effects — including integrating sparse
+point-source measurements (soil cores, tissue samples, disease ratings) with
+dense spatial layers (yield maps, EM38 surveys).
 
 Developed for the AAGI-CU-RD-OFE GRDC project ("Development of processes to
 integrate point-source data and high-resolution data").
@@ -18,7 +19,7 @@ licensed, but nothing here requires a commercial licence.
 
 | Stage | Function |
 |---|---|
-| Lay out a planned trial | `make_trial_grid()` |
+| Lay out the trial: strip or stacked, randomised or systematic | `make_trial_design()` |
 | Work out how many cores the target precision needs | `kriging_sample_interval()` |
 | Decide where the cores go | `place_point_samples()` |
 | Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
