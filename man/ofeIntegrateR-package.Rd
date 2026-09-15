@@ -43,7 +43,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Zhanglong Cao \email{jeromecy@gmail.com}
+\strong{Maintainer}: Zhanglong Cao \email{zhanglong.cao@curtin.edu.au}
 
 }
 \keyword{internal}

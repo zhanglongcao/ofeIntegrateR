@@ -18,52 +18,67 @@ measures the outcome rather than its cause. A **point-source layer** — soil
 cores, tissue tests, disease counts — carries direct agronomic meaning but is
 expensive, so a trial can afford only tens of observations.
 
-This vignette walks through combining them to estimate a treatment effect. Every
-step runs on open-source engines; ASReml-R is used automatically when licensed
-but is never required.
+This vignette walks through combining them to estimate a treatment effect.
+Every step runs on open-source engines; ASReml-R is used automatically when
+licensed but is never required.
 
 ```{r}
 library(ofeIntegrateR)
 ```
 
-## The starting point: data as a real trial produces it
+## Before the season: where should the cores go?
 
-Yield-monitor data are not a tidy grid. They arrive as a cloud of
-GPS-referenced pings along harvester passes, with position error, and the
-paddock is rarely a rectangle. Here we simulate that shape so the workflow is
-the one you would actually run.
+The sample count fixes the cost, so the design question is where to put them.
+`place_point_samples()` implements the common schemes.
 
 ```{r}
-# Harvester passes 4 m apart, pings ~1 m apart along each pass
-pass_y <- rep(seq(2, 58, by = 4), each = 100)
-cloud <- data.frame(
-  x = rep(seq(1, 99, length.out = 100), times = length(unique(pass_y))),
-  y = pass_y + rnorm(length(pass_y), 0, 0.3)          # GPS jitter
-)
+design_grid <- simulate_ofe_trial(n_row = 24, n_col = 12, n_point_samples = 5,
+                                  seed = 1)$grid
 
-# Three treatment strips across the paddock
-cloud$treat <- cut(cloud$x, breaks = c(0, 33, 66, 100), labels = c("A", "B", "C"))
-
-# A spatially structured soil property that partly drives yield
-soil <- as.vector(scale(with(cloud, sin(x / 18) + cos(y / 12) + rnorm(nrow(cloud), 0, 0.3))))
-cloud$yield <- c(A = 0, B = 0.8, C = 1.6)[as.character(cloud$treat)] +
-  0.6 * soil + rnorm(nrow(cloud), 0, 0.4)
-
-nrow(cloud)
-head(cloud, 3)
+spread <- function(p) round(mean(dist(cbind(p$col, p$row))), 1)
+sapply(c("random", "grid", "stratified", "nested"),
+       function(d) spread(place_point_samples(design_grid, n = 16, design = d)))
 ```
 
-The true treatment contrast we are trying to recover is **C − A = 1.6**.
+Higher numbers mean samples are further apart. Two points follow from the
+simulation work behind this package:
+
+- **Spread beats clustering when the samples will build a covariate surface.**
+  A systematic `"grid"` or a `"stratified"` draw beats simple random placement,
+  though the margin is second-order next to the sample count.
+- **`"nested"` is a reconnaissance design, not an interpolation design.** It
+  concentrates pairs at short lags, which is what identifies a variogram range.
+  Reusing that geometry for the integration sample leaves much of the trial far
+  from any observation and produces a worse covariate surface for the same money.
+
+## The dense layer, as a real trial produces it
+
+Yield-monitor data are not a tidy grid. They arrive as a cloud of
+GPS-referenced pings along harvester passes, with position error, over a paddock
+that is rarely a rectangle, and with the occasional pass missing.
+`simulate_yield_monitor()` generates that shape, so the workflow below is the one
+you would actually run.
+
+```{r}
+sim <- simulate_yield_monitor(n_point_samples = 30, seed = 11)
+
+nrow(sim$cloud)
+head(sim$cloud, 3)
+sim$true_effects
+```
+
+The contrast we are trying to recover is **C − A = 1.6**.
 
 ## Step 1 — put the dense layer on an estimable lattice
 
 Spatial mixed models with a separable AR1 residual need a complete rectangular
 lattice. `grid_dense_layer()` snaps the cloud onto one, averages within cells,
-and — importantly — keeps cells that contain no observations, as missing values
-rather than dropped rows.
+and — importantly — keeps cells that contain no observations as missing values
+rather than dropping them.
 
 ```{r}
-g <- grid_dense_layer(cloud, response = "yield", treat = "treat", cell_size = 5)
+g <- grid_dense_layer(sim$cloud, response = "yield", treat = "treat",
+                      cell_size = 9)
 
 dim(g)
 table(empty_cells = g$n_obs == 0)
@@ -73,22 +88,14 @@ summary(g$n_obs[g$n_obs > 0])
 Two columns are worth checking before going further.
 
 `n_obs` is how many pings support each cell. Cells resting on one or two noisy
-pings can be blanked with `n_min`:
-
-```{r}
-g_strict <- grid_dense_layer(cloud, response = "yield", treat = "treat",
-                             cell_size = 5, n_min = 3)
-sum(is.na(g_strict$yield))
-```
-
-`treat_purity` is the share of a cell's observations belonging to its assigned
-treatment. Cells straddling a strip boundary are ambiguous and are usually
-excluded:
+pings can be blanked with `n_min`. `treat_purity` is the share of a cell's
+observations belonging to its assigned treatment; cells straddling a strip
+boundary are ambiguous and are usually excluded.
 
 ```{r}
 table(pure = g$treat_purity == 1, useNA = "ifany")
 
-# Exclude boundary cells but keep the lattice complete
+# Exclude boundary cells, but keep the lattice complete
 g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
 ```
 
@@ -99,55 +106,62 @@ A real trial samples wherever the sampler could reach, not at cell centres.
 sparse layer becomes a covariate defined everywhere.
 
 ```{r}
-# 30 soil cores at arbitrary locations
-idx <- sample(nrow(cloud), 30)
-cores <- data.frame(x = cloud$x[idx], y = cloud$y[idx],
-                    soil_n = soil[idx] + rnorm(30, 0, 0.3))
-
-# Kriging works in the coordinate system of both layers
 g$x <- g$x_centre
 g$y <- g$y_centre
-kr <- krige_point_samples(cores, g, value = "soil_n", coords = c("x", "y"))
+kr <- krige_point_samples(sim$point_samples, g, value = "point_obs",
+                          coords = c("x", "y"))
 
-names(kr)[grepl("soil_n", names(kr))]
 attr(kr, "variogram")
 ```
 
 Always look at the fitted variogram. A range far larger than the trial, or a
-nugget close to the sill, means the surface is not being estimated and the
-covariate will carry little information.
+nugget close to the sill, means the surface is not being estimated.
 
-## Step 3 — fit the baseline first, then the integrated model
+### Is the point layer dense enough?
 
-The estimate to beat is **the dense layer analysed on its own with a spatial
-residual**. It costs nothing and requires no sampling, so it is the honest
-comparator for anything that does.
+`cv_krige_surface()` leaves each sample out in turn and predicts it from the
+rest.
 
 ```{r}
-# covariate = NULL is the dense-layer-only baseline
-baseline <- fit_integrated_kriged(kr, response = "yield", treat = "treat",
-                                  covariate = NULL, engine = "gls")
-
-integrated <- fit_integrated_kriged(kr, response = "yield", treat = "treat",
-                                    covariate = "soil_n_kriged", engine = "gls")
+cv <- cv_krige_surface(sim$point_samples, value = "point_obs",
+                       coords = c("x", "y"))
+c(rmse = round(cv$rmse, 3), r2 = round(cv$r2, 3))
 ```
 
-`extract_fixed_effects()` gives a tidy table regardless of which engine fitted
-the model, so downstream code does not need to change when a licence appears or
-disappears.
+Read this as a **sampling** diagnostic. A negative `r2` means kriging predicts
+worse than the sample mean — the layer is too sparse or too noisy to reconstruct
+its own surface, and the answer is more samples next season. It does not by
+itself condemn the current analysis, and a healthy `r2` does not guarantee the
+surface is *relevant to yield*: a soil property can be mapped perfectly and still
+explain nothing about the treatment response.
+
+## Step 3 — compare the integrated fit against the free baseline
+
+The estimate to beat is the dense layer analysed on its own with a spatial
+residual. It costs nothing and requires no sampling, so it is the honest
+comparator for anything that does. `compare_integration()` fits both and lines
+them up.
 
 ```{r}
-contrast_C <- function(fit) {
-  fx <- extract_fixed_effects(fit)
-  fx[grepl("treatC$", fx$term), c("term", "estimate", "se")]
-}
+cmp <- compare_integration(kr, response = "yield", treat = "treat",
+                           covariate = "point_obs_kriged", engine = "gls")
 
-rbind(baseline = contrast_C(baseline),
-      integrated = contrast_C(integrated))
+cmp[grepl("treat", cmp$term), ]
 ```
 
-Compare both against the truth of 1.6. Report both in your write-up: the
-difference between them is exactly what the sampling bought.
+Compare `baseline_estimate` and `integrated_estimate` against the truth of 1.6,
+and look at `se_change` — negative means the integrated fit is more precise.
+Report both models in your write-up: the difference between them is exactly what
+the sampling bought.
+
+The two fitted models are kept for inspection:
+
+```{r}
+names(attr(cmp, "models"))
+```
+
+To fit either model on its own, use `fit_integrated_kriged()` directly;
+`covariate = NULL` gives the baseline.
 
 ## Integrating more than one point variable
 
@@ -169,25 +183,29 @@ fit_integrated_kriged(kr, response = "yield", treat = "treat",
 
 `"gls"` is the open-source workhorse. `"lm"` ignores spatial correlation
 entirely and is best kept as a diagnostic reference rather than a final model.
+`extract_fixed_effects()` returns the same tidy table whichever engine fitted the
+model, so downstream code does not change when a licence appears or disappears.
 
 ## When integration is not worth it
 
 Simulation work behind this package (GRDC project AAGI-CU-RD-OFE, Milestone 4)
-found the benefit is real but conditional. Three findings are worth carrying
-into planning:
+found the benefit is real but conditional. Three findings are worth carrying into
+planning:
 
-- **Sample count matters, and thirty is a floor rather than a target.** On
-  idealised lattices thirty samples were enough; on realistic trial geometry the
-  same thirty bought very little, because averaging many yield pings per cell
-  already makes the baseline accurate.
+- **Thirty samples is a floor, not a target.** On idealised lattices thirty
+  samples were enough. On realistic trial geometry the same thirty bought very
+  little, because averaging many yield pings per cell already makes the baseline
+  accurate — the tidy benchmark had understated the baseline, not overstated the
+  method.
 - **Short-range variation defeats it.** Where the point variable decorrelates
   over a distance comparable to the grid cell, no affordable number of samples
   reconstructs the surface. Check the fitted variogram range against your cell
   size before committing.
 - **A significant covariate is not evidence that integration helped.** With
   hundreds of grid cells the kriged covariate clears `|t| > 2` almost
-  automatically. Judge the method by comparing treatment contrasts against the
-  baseline, not by the covariate's p-value.
+  automatically, including where it does nothing for the treatment estimate.
+  Judge the method on how the treatment contrasts move, which is what
+  `compare_integration()` reports.
 
 ## The joint bivariate model
 

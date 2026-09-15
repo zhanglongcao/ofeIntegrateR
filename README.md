@@ -8,14 +8,37 @@ Tools for integrating sparse point-source measurements (e.g. soil cores,
 tissue samples, disease ratings) with dense spatial covariates (e.g. EM38
 surveys, yield maps) in on-farm experimentation (OFE) strip trials.
 
-Developed for Milestone 4 of the AAGI-CU-RD-OFE GRDC project ("Development
-of processes to integrate point-source data and high-resolution data").
+Developed for the AAGI-CU-RD-OFE GRDC project ("Development of processes to
+integrate point-source data and high-resolution data").
+
+**Every step has an open-source path.** ASReml-R is used automatically when
+licensed, but nothing here requires a commercial licence.
+
+## The pipeline
+
+| Stage | Function |
+|---|---|
+| Decide where the cores go | `place_point_samples()` |
+| Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
+| Interpolate the sparse layer onto that lattice | `krige_point_samples()` |
+| Check the point layer is dense enough to be worth using | `cv_krige_surface()` |
+| Fit the baseline and the integrated model, and compare | `compare_integration()` |
+| Fit either model on its own | `fit_integrated_kriged()` |
+| Model both layers jointly instead | `fit_integrated_joint()` |
+| Pull treatment contrasts out of any of them | `extract_fixed_effects()` |
+
+Two simulators generate test data: `simulate_ofe_trial()` for a tidy lattice,
+and `simulate_yield_monitor()` for the awkward shape a real harvester produces —
+GPS-referenced points along passes, position error, a clipped paddock corner and
+missing passes.
+
+Start with `vignette("ofe-integration", package = "ofeIntegrateR")` for an
+end-to-end walkthrough.
 
 ## Two integration strategies
 
-Both strategies have a fully open-source path (no licence required) as
-well as an [asreml-R](https://vsni.co.uk/software/asreml-r) path for users
-with a licence:
+Both have a fully open-source path as well as an
+[asreml-R](https://vsni.co.uk/software/asreml-r) path for users with a licence:
 
 - **Kriged-covariate** (`fit_integrated_kriged()`): krige the sparse
   point-source variable onto the trial grid with `krige_point_samples()`,
@@ -24,7 +47,9 @@ with a licence:
   residual via asreml-R; `engine = "gls"` (open source) fits an
   exponential spatial correlation structure via `nlme::gls()`;
   `engine = "lm"` (open source) ignores spatial autocorrelation entirely
-  — the simplest but weakest fallback.
+  — the simplest but weakest fallback. Pass `covariate = NULL` for the
+  dense-layer-only baseline, and several covariate names to integrate more
+  than one point variable at once.
 - **Joint bivariate model** (`fit_integrated_joint()`): fit the dense
   response and the point-source measurements *jointly* as two response
   layers/traits sharing a spatial random effect, avoiding a separate
@@ -33,22 +58,17 @@ with a licence:
   via `sommer::mmer()`. In testing, the sommer fit reproduced the asreml
   treatment-contrast estimates almost exactly.
 
-## Getting real data into the pipeline
+## Always report the baseline
 
-Yield-monitor and sensor data arrive as an irregular cloud of GPS-referenced
-observations along machinery passes, but a separable AR1 residual is defined
-only over a complete rectangular lattice. `grid_dense_layer()` is the entry
-point that bridges the two: it snaps the cloud onto a lattice of a chosen cell
-size, aggregates within cells, keeps empty cells as missing values so the
-lattice stays estimable, and reports the treatment purity of each cell so that
-cells straddling a strip boundary can be excluded.
+The dense layer is already collected, so a spatial model of it costs nothing;
+point sampling does. Reporting only the integrated fit hides how much of its
+accuracy was available for free. `compare_integration()` fits both and reports
+the treatment contrasts side by side.
 
-`simulate_ofe_trial()` generates synthetic test data for both strategies,
-and `extract_fixed_effects()` gives a model-agnostic way to pull
-treatment-contrast estimates out of an `lm`, `gls`, `asreml`, or `mmer` fit.
-
-Start with `vignette("ofe-integration", package = "ofeIntegrateR")` for an
-end-to-end walkthrough from raw yield-monitor points to a treatment contrast.
+A large, highly significant covariate coefficient is **not** evidence that
+integration helped: with hundreds of grid cells the covariate clears
+conventional significance almost automatically. Judge the method by how the
+treatment contrasts and their standard errors move.
 
 ## Installation
 
@@ -69,37 +89,28 @@ see VSNi for licensing.
 ```r
 library(ofeIntegrateR)
 
-# Simulate a strip trial with a sparse point-source covariate
-sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_treat = 3,
-                           treat_effects = c(0, 0.8, 1.6),
-                           n_point_samples = 25, seed = 11)
+# A trial as a yield monitor actually records it: points along passes,
+# GPS jitter, a clipped corner, some passes missing
+sim <- simulate_yield_monitor(n_point_samples = 30, seed = 11)
 
-# With real data, start here instead: aggregate the irregular cloud first
-# grid <- grid_dense_layer(yield_points, response = "yield", treat = "treat",
-#                          cell_size = 9)
+# 1. Snap the irregular cloud onto a complete lattice
+g <- grid_dense_layer(sim$cloud, response = "yield", treat = "treat",
+                      cell_size = 9)
 
-# Always fit the baseline: the dense layer alone, no sampling cost.
-# This is the estimate an integrated analysis has to beat.
-baseline <- fit_integrated_kriged(sim$grid, response = "dense_response",
-                                   treat = "treat", covariate = NULL,
-                                   engine = "gls")
+# Drop cells straddling a treatment boundary, keeping the lattice complete
+g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
 
-# Strategy 1: krige the point-source variable, use it as a fixed covariate
-kriged <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
-fit_a <- fit_integrated_kriged(kriged, response = "dense_response",
-                                treat = "treat", covariate = "point_obs_kriged",
-                                engine = "gls")  # or "asreml" / "lm"
+# 2. Krige the sparse point layer onto the same grid
+g$x <- g$x_centre; g$y <- g$y_centre
+kr <- krige_point_samples(sim$point_samples, g, value = "point_obs",
+                          coords = c("x", "y"))
 
-# Compare the two: the difference is what the sampling bought
-extract_fixed_effects(baseline)
-extract_fixed_effects(fit_a)
+# 3. Is the point layer dense enough to be worth using?
+cv_krige_surface(sim$point_samples, value = "point_obs", coords = c("x", "y"))
 
-# Strategy 2: fit dense + point-source data jointly (no separate kriging step)
-fit_b <- fit_integrated_joint(sim$grid, sim$point_samples,
-                               response_dense = "dense_response",
-                               response_point = "point_obs",
-                               engine = "sommer")  # or "asreml"
-extract_fixed_effects(fit_b)
+# 4. Baseline vs integrated, side by side
+compare_integration(kr, response = "yield", treat = "treat",
+                    covariate = "point_obs_kriged", engine = "gls")
 ```
 
 ## Notes on asreml-R behaviour

@@ -4,6 +4,26 @@ First release.
 
 ## New features
 
+* `place_point_samples()` chooses where to put point samples under a named
+  design — random, systematic grid, stratified or nested. The package Description
+  promised sampling-design tools; this delivers them. Nested placement is a
+  variogram-reconnaissance design and is deliberately clustered; grid and
+  stratified placement are the ones to use when the samples will build a
+  covariate surface.
+
+* `cv_krige_surface()` cross-validates the kriged point-source surface, so a
+  trial team can tell whether its point layer is dense enough to reconstruct
+  itself. It is a sampling diagnostic, not a verdict on an analysis.
+
+* `compare_integration()` fits the baseline and the integrated model on the same
+  data and reports the treatment contrasts side by side, making the comparison
+  the method should be judged on a single call.
+
+* `simulate_yield_monitor()` generates a trial the way a harvester records it —
+  GPS-referenced points along passes, position error, a clipped paddock corner,
+  occasional missing passes, and point samples at arbitrary locations — so a
+  workflow can be tested end to end through `grid_dense_layer()`.
+
 * `grid_dense_layer()` aggregates an irregular dense layer — yield-monitor or
   proximal-sensor points along machinery passes — onto the complete rectangular
   lattice that a separable AR1 residual requires. Empty cells are retained as
