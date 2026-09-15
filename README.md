@@ -83,6 +83,8 @@ treatment contrasts and their standard errors move.
 remotes::install_github("zhanglongcao/ofeIntegrateR")
 ```
 
+Documentation: <https://www.zcao.space/ofeIntegrateR/>
+
 Everything works out of the box with open-source dependencies only
 (`engine = "lm"` / `"gls"` for `fit_integrated_kriged()`, and
 `engine = "sommer"` for `fit_integrated_joint()`). The `engine = "asreml"`
