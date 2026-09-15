@@ -50,7 +50,7 @@ as_lme_random <- function(random) {
 #'   to build the spatial residual structure. Ignored when `engine = "lm"`.
 #' @param engine Character; `"asreml"` (default) fits
 #'   `response ~ treat + covariate` with an `ar1(row):ar1(col)` residual via
-#'   [asreml::asreml()] — requires a licensed copy of asreml-R. `"lme"` fits
+#'   `asreml::asreml()` — requires a licensed copy of asreml-R. `"lme"` fits
 #'   random effects **and** an exponential spatial correlation via
 #'   [nlme::lme()], which is the open-source counterpart to the asreml fit for
 #'   a replicated trial. `"gls"` fits
@@ -66,7 +66,7 @@ as_lme_random <- function(random) {
 #'   needed. Supported by `engine = "asreml"` and `engine = "lme"`; the `"gls"`
 #'   and `"lm"` engines cannot fit random effects and raise an error rather
 #'   than ignoring the argument.
-#' @param ... Additional arguments passed to [asreml::asreml()] (e.g.
+#' @param ... Additional arguments passed to `asreml::asreml()` (e.g.
 #'   `maxit`), [nlme::lme()], [nlme::gls()], or [stats::lm()].
 #'
 #' @return The fitted model object (class `asreml`, `gls`, or `lm`). Use

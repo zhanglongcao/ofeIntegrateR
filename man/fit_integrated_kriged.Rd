@@ -44,7 +44,7 @@ to build the spatial residual structure. Ignored when \code{engine = "lm"}.}
 
 \item{engine}{Character; \code{"asreml"} (default) fits
 \code{response ~ treat + covariate} with an \code{ar1(row):ar1(col)} residual via
-\code{\link[asreml:asreml]{asreml::asreml()}} — requires a licensed copy of asreml-R. \code{"lme"} fits
+\code{asreml::asreml()} — requires a licensed copy of asreml-R. \code{"lme"} fits
 random effects \strong{and} an exponential spatial correlation via
 \code{\link[nlme:lme]{nlme::lme()}}, which is the open-source counterpart to the asreml fit for
 a replicated trial. \code{"gls"} fits
@@ -56,7 +56,7 @@ fixed-effects model via \code{\link[stats:lm]{stats::lm()}} with no spatial resi
 structure at all — the simplest fallback, but does not account for
 residual spatial autocorrelation.}
 
-\item{...}{Additional arguments passed to \code{\link[asreml:asreml]{asreml::asreml()}} (e.g.
+\item{...}{Additional arguments passed to \code{asreml::asreml()} (e.g.
 \code{maxit}), \code{\link[nlme:lme]{nlme::lme()}}, \code{\link[nlme:gls]{nlme::gls()}}, or \code{\link[stats:lm]{stats::lm()}}.}
 }
 \value{

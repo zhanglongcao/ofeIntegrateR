@@ -102,9 +102,9 @@ fit_joint_sommer <- function(grid, point_samples, response_dense, response_point
 #' @param row,col Character; names of the row/column position columns,
 #'   shared between `grid` and `point_samples`.
 #' @param engine Character; `"asreml"` (default) fits the model via
-#'   [asreml::asreml()] — requires a licensed copy of asreml-R. `"sommer"`
+#'   `asreml::asreml()` — requires a licensed copy of asreml-R. `"sommer"`
 #'   fits an open-source (CRAN-only, no licence required) analogue via
-#'   [sommer::mmer()]: the dense and point-source responses are modelled as
+#'   `sommer::mmer()`: the dense and point-source responses are modelled as
 #'   two traits in a multi-trait model sharing a random effect per grid
 #'   location (`vsr(unit, Gtc = ...)`), with the treatment effect estimated
 #'   separately for each trait (only the dense-trait estimate is
@@ -131,8 +131,8 @@ fit_joint_sommer <- function(grid, point_samples, response_dense, response_point
 #'   `cor_structure = "independent"`) can trigger this with sparse
 #'   point-source data, so it is enabled by default. Ignored when
 #'   `engine = "sommer"`.
-#' @param ... Additional arguments passed to [asreml::asreml()] or
-#'   [sommer::mmer()].
+#' @param ... Additional arguments passed to `asreml::asreml()` or
+#'   `sommer::mmer()`.
 #'
 #' @return A fitted `asreml` or `mmer` model object. Treatment contrasts
 #'   for the dense layer can be retrieved with [extract_fixed_effects()]

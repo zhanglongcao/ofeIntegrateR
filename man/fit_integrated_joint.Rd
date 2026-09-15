@@ -42,9 +42,9 @@ The treatment effect is estimated from the dense layer only.}
 shared between \code{grid} and \code{point_samples}.}
 
 \item{engine}{Character; \code{"asreml"} (default) fits the model via
-\code{\link[asreml:asreml]{asreml::asreml()}} — requires a licensed copy of asreml-R. \code{"sommer"}
+\code{asreml::asreml()} — requires a licensed copy of asreml-R. \code{"sommer"}
 fits an open-source (CRAN-only, no licence required) analogue via
-\code{\link[sommer:mmer]{sommer::mmer()}}: the dense and point-source responses are modelled as
+\code{sommer::mmer()}: the dense and point-source responses are modelled as
 two traits in a multi-trait model sharing a random effect per grid
 location (\code{vsr(unit, Gtc = ...)}), with the treatment effect estimated
 separately for each trait (only the dense-trait estimate is
@@ -76,8 +76,8 @@ estimation. In testing, the layer-sharing random effect (even with
 point-source data, so it is enabled by default. Ignored when
 \code{engine = "sommer"}.}
 
-\item{...}{Additional arguments passed to \code{\link[asreml:asreml]{asreml::asreml()}} or
-\code{\link[sommer:mmer]{sommer::mmer()}}.}
+\item{...}{Additional arguments passed to \code{asreml::asreml()} or
+\code{sommer::mmer()}.}
 }
 \value{
 A fitted \code{asreml} or \code{mmer} model object. Treatment contrasts
