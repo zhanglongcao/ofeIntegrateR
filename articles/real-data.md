@@ -35,7 +35,7 @@ topographic class.
 
 ## Project the coordinates first
 
-[`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md)
+[`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md)
 works in the units of the coordinates it is given, so degrees of
 latitude and longitude will produce meaningless cell sizes. Project to
 metres before gridding. A local equirectangular approximation is
@@ -64,7 +64,7 @@ About 1,700 yield observations over a 660 m × 240 m block.
 The cell size trades two things against each other. Large cells average
 more yield observations, which suppresses monitor noise. Small cells are
 less likely to straddle a treatment boundary.
-[`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md)
+[`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md)
 reports both sides of that trade-off, so it can be made on evidence
 rather than habit.
 
@@ -191,7 +191,7 @@ cell and spread across hundreds of cells, already estimates these
 contrasts well. A covariate has to earn its place against that, and here
 it did not. Simulation work behind this package found the same pattern
 whenever the baseline is strong — which is why
-[`compare_integration()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/compare_integration.md)
+[`compare_integration()`](https://www.zcao.space/ofeIntegrateR/reference/compare_integration.md)
 reports both models rather than the integrated one alone.
 
 ## What to take from this

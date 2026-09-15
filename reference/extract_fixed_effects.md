@@ -3,9 +3,9 @@
 Works for `lm`, `gls`, `asreml`, and `mmer` model objects, so the same
 downstream code can summarise treatment contrasts regardless of which
 `engine` was used in
-[`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md)
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
 or
-[`fit_integrated_joint()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_joint.md).
+[`fit_integrated_joint()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_joint.md).
 
 ## Usage
 

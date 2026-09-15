@@ -7,9 +7,9 @@ structure requires. This function is the first step of the integration
 pipeline: it snaps the dense layer onto a regular grid of a chosen cell
 size, aggregates the response within each cell, and returns a
 **complete** lattice with integer `row` and `col` indices ready for
-[`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md)
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
 or
-[`fit_integrated_joint()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_joint.md).
+[`fit_integrated_joint()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_joint.md).
 
 ## Usage
 

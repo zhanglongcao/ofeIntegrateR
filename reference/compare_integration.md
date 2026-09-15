@@ -25,7 +25,7 @@ compare_integration(
 
   Data frame containing the gridded dense response, the treatment factor
   and the kriged covariate(s) — typically the output of
-  [`krige_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/krige_point_samples.md).
+  [`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md).
 
 - response, treat:
 
@@ -43,12 +43,12 @@ compare_integration(
 - engine:
 
   Fitting engine, passed to
-  [`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md).
+  [`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md).
 
 - ...:
 
   Further arguments passed to
-  [`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md).
+  [`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md).
 
 ## Value
 

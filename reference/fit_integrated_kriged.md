@@ -2,7 +2,7 @@
 
 Implements the "kriged-covariate" data integration strategy: a sparse
 point-source variable (already kriged onto the trial grid, e.g. via
-[`krige_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/krige_point_samples.md))
+[`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md))
 is included as a fixed covariate alongside the treatment factor, with an
 AR1xAR1 spatial residual structure (when `engine = "asreml"`) to absorb
 any remaining spatial autocorrelation in the dense response.
@@ -41,7 +41,7 @@ fit_integrated_kriged(
 
   Character vector; name(s) of the kriged point-source covariate
   column(s) (e.g. the `*_kriged` columns produced by
-  [`krige_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/krige_point_samples.md)).
+  [`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md)).
   Supply several names to integrate more than one point variable at
   once, such as soil nitrogen and phosphorus. Use `NULL` to fit the
   treatment model with no point-source covariate at all: this is the
@@ -77,7 +77,7 @@ fit_integrated_kriged(
 ## Value
 
 The fitted model object (class `asreml`, `gls`, or `lm`). Use
-[`extract_fixed_effects()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/extract_fixed_effects.md)
+[`extract_fixed_effects()`](https://www.zcao.space/ofeIntegrateR/reference/extract_fixed_effects.md)
 to retrieve a tidy table of fixed-effect estimates, including the
 treatment contrasts.
 

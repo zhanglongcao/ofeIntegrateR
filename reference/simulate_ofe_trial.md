@@ -5,10 +5,10 @@ correlated "dense" response (e.g. yield), and a spatially correlated
 "point-source" covariate (e.g. soil, tissue, or disease measurements)
 that is only observed at a sparse set of sampled locations. Intended for
 testing and demonstrating
-[`krige_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/krige_point_samples.md),
-[`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md),
+[`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md),
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md),
 and
-[`fit_integrated_joint()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_joint.md).
+[`fit_integrated_joint()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_joint.md).
 
 ## Usage
 

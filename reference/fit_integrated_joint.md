@@ -3,7 +3,7 @@
 Implements the "joint model" data integration strategy: rather than
 pre-kriging the point-source variable and using it as a fixed covariate
 (see
-[`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md)),
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)),
 the dense response and the point-source measurements are fitted
 **jointly** as two stacked response "layers" sharing a spatial random
 effect at each grid location. This lets sparse point samples directly
@@ -36,14 +36,14 @@ fit_integrated_joint(
 
   Data frame, one row per grid location, with the dense response,
   treatment factor, and row/column position columns (as produced by
-  [`simulate_ofe_trial()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/simulate_ofe_trial.md)'s
+  [`simulate_ofe_trial()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_ofe_trial.md)'s
   `grid` element).
 
 - point_samples:
 
   Data frame of sparse point-source observations with row/column
   position columns and the point-source value column (as produced by
-  [`simulate_ofe_trial()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/simulate_ofe_trial.md)'s
+  [`simulate_ofe_trial()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_ofe_trial.md)'s
   `point_samples` element).
 
 - response_dense:
@@ -118,7 +118,7 @@ fit_integrated_joint(
 
 A fitted `asreml` or `mmer` model object. Treatment contrasts for the
 dense layer can be retrieved with
-[`extract_fixed_effects()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/extract_fixed_effects.md)
+[`extract_fixed_effects()`](https://www.zcao.space/ofeIntegrateR/reference/extract_fixed_effects.md)
 (look for terms matching `at(layer, "dense"):<treat>` for asreml, or
 `<response_dense>:<treat><level>` for sommer).
 

@@ -3,6 +3,6 @@
 ### Get started
 
 - [Integrating point-source data with a yield
-  map](https://zhanglongcao.github.io/ofeIntegrateR/articles/ofe-integration.md):
+  map](https://www.zcao.space/ofeIntegrateR/articles/ofe-integration.md):
 - [A worked example on real trial
-  data](https://zhanglongcao.github.io/ofeIntegrateR/articles/real-data.md):
+  data](https://www.zcao.space/ofeIntegrateR/articles/real-data.md):

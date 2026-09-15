@@ -1,6 +1,6 @@
 # Simulate a trial as a yield monitor actually records it
 
-[`simulate_ofe_trial()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/simulate_ofe_trial.md)
+[`simulate_ofe_trial()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_ofe_trial.md)
 produces a tidy lattice: one observation per cell, treatments aligned to
 whole columns. Real dense layers look nothing like that, and code that
 only ever sees the tidy version tends to break on first contact with a
@@ -9,7 +9,7 @@ GPS-referenced points along machinery passes, position error, a paddock
 that is not a rectangle, occasional missing passes, and point samples
 taken wherever the sampler could reach — so a workflow can be tested end
 to end through
-[`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md).
+[`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md).
 
 ## Usage
 

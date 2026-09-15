@@ -5,7 +5,7 @@ soil cores, tissue samples) and uses ordinary kriging to predict values
 across a target grid (e.g. the full trial extent or a dense covariate
 grid). This is the first step of the "kriged-covariate" integration
 strategy implemented in
-[`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md).
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md).
 
 ## Usage
 

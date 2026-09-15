@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   ofe-integration: ofe-integration.html
   real-data: real-data.html
-last_built: 2026-09-15T11:52Z
+last_built: 2026-09-15T11:57Z
 urls:
-  reference: https://zhanglongcao.github.io/ofeIntegrateR/reference
-  article: https://zhanglongcao.github.io/ofeIntegrateR/articles
+  reference: https://www.zcao.space/ofeIntegrateR/reference
+  article: https://www.zcao.space/ofeIntegrateR/articles

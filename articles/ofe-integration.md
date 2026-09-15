@@ -20,7 +20,7 @@ library(ofeIntegrateR)
 
 The sample count fixes the cost, so the design question is where to put
 them.
-[`place_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/place_point_samples.md)
+[`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md)
 implements the common schemes.
 
 ``` r
@@ -54,7 +54,7 @@ Yield-monitor data are not a tidy grid. They arrive as a cloud of
 GPS-referenced pings along harvester passes, with position error, over a
 paddock that is rarely a rectangle, and with the occasional pass
 missing.
-[`simulate_yield_monitor()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/simulate_yield_monitor.md)
+[`simulate_yield_monitor()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_yield_monitor.md)
 generates that shape, so the workflow below is the one you would
 actually run.
 
@@ -80,7 +80,7 @@ The contrast we are trying to recover is **C − A = 1.6**.
 
 Spatial mixed models with a separable AR1 residual need a complete
 rectangular lattice.
-[`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md)
+[`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md)
 snaps the cloud onto one, averages within cells, and — importantly —
 keeps cells that contain no observations as missing values rather than
 dropping them.
@@ -123,7 +123,7 @@ g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
 
 A real trial samples wherever the sampler could reach, not at cell
 centres.
-[`krige_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/krige_point_samples.md)
+[`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md)
 fits a variogram and predicts onto the grid, so the sparse layer becomes
 a covariate defined everywhere.
 
@@ -145,7 +145,7 @@ or a nugget close to the sill, means the surface is not being estimated.
 
 ### Is the point layer dense enough?
 
-[`cv_krige_surface()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/cv_krige_surface.md)
+[`cv_krige_surface()`](https://www.zcao.space/ofeIntegrateR/reference/cv_krige_surface.md)
 leaves each sample out in turn and predicts it from the rest.
 
 ``` r
@@ -170,7 +170,7 @@ the treatment response.
 The estimate to beat is the dense layer analysed on its own with a
 spatial residual. It costs nothing and requires no sampling, so it is
 the honest comparator for anything that does.
-[`compare_integration()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/compare_integration.md)
+[`compare_integration()`](https://www.zcao.space/ofeIntegrateR/reference/compare_integration.md)
 fits both and lines them up.
 
 ``` r
@@ -201,7 +201,7 @@ names(attr(cmp, "models"))
 ```
 
 To fit either model on its own, use
-[`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md)
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
 directly; `covariate = NULL` gives the baseline.
 
 ## Integrating more than one point variable
@@ -226,7 +226,7 @@ fit_integrated_kriged(kr, response = "yield", treat = "treat",
 `"gls"` is the open-source workhorse. `"lm"` ignores spatial correlation
 entirely and is best kept as a diagnostic reference rather than a final
 model.
-[`extract_fixed_effects()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/extract_fixed_effects.md)
+[`extract_fixed_effects()`](https://www.zcao.space/ofeIntegrateR/reference/extract_fixed_effects.md)
 returns the same tidy table whichever engine fitted the model, so
 downstream code does not change when a licence appears or disappears.
 
@@ -250,12 +250,12 @@ are worth carrying into planning:
   almost automatically, including where it does nothing for the
   treatment estimate. Judge the method on how the treatment contrasts
   move, which is what
-  [`compare_integration()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/compare_integration.md)
+  [`compare_integration()`](https://www.zcao.space/ofeIntegrateR/reference/compare_integration.md)
   reports.
 
 ## The joint bivariate model
 
-[`fit_integrated_joint()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_joint.md)
+[`fit_integrated_joint()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_joint.md)
 models the dense and point layers together with a shared spatial random
 effect, estimating their cross-covariance instead of treating the kriged
 surface as known. It is the right choice when that covariance is itself

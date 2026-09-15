@@ -36,7 +36,7 @@ cv_krige_surface(
   Optional variogram model from
   [`gstat::vgm()`](https://r-spatial.github.io/gstat/reference/vgm.html).
   By default the same exponential model
-  [`krige_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/krige_point_samples.md)
+  [`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md)
   would fit is used, so the diagnostic matches the surface actually
   entering the analysis.
 

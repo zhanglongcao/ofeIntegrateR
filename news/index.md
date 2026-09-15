@@ -6,7 +6,7 @@ First release.
 
 ### New features
 
-- [`place_point_samples()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/place_point_samples.md)
+- [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md)
   chooses where to put point samples under a named design — random,
   systematic grid, stratified or nested. The package Description
   promised sampling-design tools; this delivers them. Nested placement
@@ -14,24 +14,24 @@ First release.
   grid and stratified placement are the ones to use when the samples
   will build a covariate surface.
 
-- [`cv_krige_surface()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/cv_krige_surface.md)
+- [`cv_krige_surface()`](https://www.zcao.space/ofeIntegrateR/reference/cv_krige_surface.md)
   cross-validates the kriged point-source surface, so a trial team can
   tell whether its point layer is dense enough to reconstruct itself. It
   is a sampling diagnostic, not a verdict on an analysis.
 
-- [`compare_integration()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/compare_integration.md)
+- [`compare_integration()`](https://www.zcao.space/ofeIntegrateR/reference/compare_integration.md)
   fits the baseline and the integrated model on the same data and
   reports the treatment contrasts side by side, making the comparison
   the method should be judged on a single call.
 
-- [`simulate_yield_monitor()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/simulate_yield_monitor.md)
+- [`simulate_yield_monitor()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_yield_monitor.md)
   generates a trial the way a harvester records it — GPS-referenced
   points along passes, position error, a clipped paddock corner,
   occasional missing passes, and point samples at arbitrary locations —
   so a workflow can be tested end to end through
-  [`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md).
+  [`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md).
 
-- [`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md)
+- [`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md)
   aggregates an irregular dense layer — yield-monitor or proximal-sensor
   points along machinery passes — onto the complete rectangular lattice
   that a separable AR1 residual requires. Empty cells are retained as
@@ -43,13 +43,13 @@ First release.
   beat, so it is now a first-class call rather than something to
   assemble by hand.
 
-- [`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md)
+- [`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
   accepts several kriged covariates at once, so more than one point
   variable (soil nitrogen and phosphorus, say) can be integrated in a
   single model.
 
 - New vignette,
-  [`vignette("ofe-integration")`](https://zhanglongcao.github.io/ofeIntegrateR/articles/ofe-integration.md):
+  [`vignette("ofe-integration")`](https://www.zcao.space/ofeIntegrateR/articles/ofe-integration.md):
   an end-to-end walkthrough from raw yield-monitor points to a treatment
   contrast, using open-source engines throughout.
 
@@ -66,7 +66,7 @@ First release.
   Pages.
 
 - New article,
-  [`vignette("real-data")`](https://zhanglongcao.github.io/ofeIntegrateR/articles/real-data.md):
+  [`vignette("real-data")`](https://www.zcao.space/ofeIntegrateR/articles/real-data.md):
   the full workflow on
   [`agridat::lasrosas.corn`](https://kwstat.github.io/agridat/reference/lasrosas.corn.html),
   an on-farm nitrogen experiment recorded by a yield monitor. It shows
@@ -82,7 +82,7 @@ First release.
 
 ### Bug fixes
 
-- [`fit_integrated_kriged()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/fit_integrated_kriged.md)
+- [`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
   silently dropped all but the first covariate when passed more than
   one, because the formula was built with a vectorised
   [`paste()`](https://rdrr.io/r/base/paste.html) and no `collapse`. The

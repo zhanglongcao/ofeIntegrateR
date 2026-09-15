@@ -22,9 +22,9 @@ place_point_samples(
 - grid:
 
   Data frame of candidate locations, typically the output of
-  [`grid_dense_layer()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/grid_dense_layer.md)
+  [`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md)
   or the `grid` element of
-  [`simulate_ofe_trial()`](https://zhanglongcao.github.io/ofeIntegrateR/reference/simulate_ofe_trial.md).
+  [`simulate_ofe_trial()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_ofe_trial.md).
 
 - n:
 
