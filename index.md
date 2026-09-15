@@ -15,6 +15,8 @@ when licensed, but nothing here requires a commercial licence.
 
 | Stage | Function |
 |----|----|
+| Lay out a planned trial | [`make_trial_grid()`](https://www.zcao.space/ofeIntegrateR/reference/make_trial_grid.md) |
+| Work out how many cores the target precision needs | [`kriging_sample_interval()`](https://www.zcao.space/ofeIntegrateR/reference/kriging_sample_interval.md) |
 | Decide where the cores go | [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md) |
 | Get irregular yield-monitor data onto an estimable lattice | [`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md) |
 | Interpolate the sparse layer onto that lattice | [`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md) |

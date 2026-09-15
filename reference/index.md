@@ -1,10 +1,14 @@
 # Package index
 
-## Designing the sample
+## Planning the trial and the sample
 
-The sample count fixes the cost, so the design question is where the
-cores should go.
+Before the season: lay out the trial, work out how many cores the target
+precision needs, and choose where they go.
 
+- [`make_trial_grid()`](https://www.zcao.space/ofeIntegrateR/reference/make_trial_grid.md)
+  : Build a candidate grid for a planned trial
+- [`kriging_sample_interval()`](https://www.zcao.space/ofeIntegrateR/reference/kriging_sample_interval.md)
+  : How far apart should the samples be, and how many are needed?
 - [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md)
   : Choose where to put point samples
 

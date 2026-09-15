@@ -39,7 +39,7 @@ Useful links:
 
 - <https://github.com/zhanglongcao/ofeIntegrateR>
 
-- <https://zhanglongcao.github.io/ofeIntegrateR/>
+- <https://www.zcao.space/ofeIntegrateR/>
 
 - Report bugs at <https://github.com/zhanglongcao/ofeIntegrateR/issues>
 
