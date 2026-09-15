@@ -5,15 +5,15 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Integrate point-source and high-resolution data in on-farm experiments • ofeIntegrateR</title>
+<title>Design, sample and analyse on-farm strip experiments • ofeIntegrateR</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Integrate point-source and high-resolution data in on-farm experiments">
-<meta name="description" content="Combine sparse soil, tissue or disease samples with dense yield-monitor and sensor layers to estimate treatment effects in on-farm experimentation strip trials. Every step has an open-source path.
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Design, sample and analyse on-farm strip experiments">
+<meta name="description" content="A workflow for OFE strip trials: lay out the design, plan the sampling, grid the yield-monitor data, and estimate treatment effects — optionally integrating sparse soil or tissue samples with the dense layer. Every step has an open-source path.
 ">
-<meta property="og:description" content="Combine sparse soil, tissue or disease samples with dense yield-monitor and sensor layers to estimate treatment effects in on-farm experimentation strip trials. Every step has an open-source path.
+<meta property="og:description" content="A workflow for OFE strip trials: lay out the design, plan the sampling, grid the yield-monitor data, and estimate treatment effects — optionally integrating sparse soil or tissue samples with the dense layer. Every step has an open-source path.
 ">
 </head>
 <body>
@@ -60,7 +60,7 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>Tools for integrating sparse point-source measurements (e.g. soil cores, tissue samples, disease ratings) with dense spatial covariates (e.g. EM38 surveys, yield maps) in on-farm experimentation (OFE) strip trials.</p>
+<p>A workflow for on-farm experimentation (OFE) strip trials, from planning a trial to estimating its treatment effects — including integrating sparse point-source measurements (soil cores, tissue samples, disease ratings) with dense spatial layers (yield maps, EM38 surveys).</p>
 <p>Developed for the AAGI-CU-RD-OFE GRDC project (“Development of processes to integrate point-source data and high-resolution data”).</p>
 <p><strong>Every step has an open-source path.</strong> ASReml-R is used automatically when licensed, but nothing here requires a commercial licence.</p>
 <div class="section level2">
@@ -77,8 +77,8 @@
 </tr></thead>
 <tbody>
 <tr>
-<td>Lay out a planned trial</td>
-<td><code><a href="reference/make_trial_grid.html">make_trial_grid()</a></code></td>
+<td>Lay out the trial: strip or stacked, randomised or systematic</td>
+<td><code><a href="reference/make_trial_design.html">make_trial_design()</a></code></td>
 </tr>
 <tr>
 <td>Work out how many cores the target precision needs</td>

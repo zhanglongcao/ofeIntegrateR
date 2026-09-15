@@ -1,12 +1,16 @@
 # Package index
 
-## Planning the trial and the sample
+## Designing the trial
 
-Before the season: lay out the trial, work out how many cores the target
-precision needs, and choose where they go.
+Lay out the plots: strip or stacked, randomised or systematic.
 
-- [`make_trial_grid()`](https://www.zcao.space/ofeIntegrateR/reference/make_trial_grid.md)
-  : Build a candidate grid for a planned trial
+- [`make_trial_design()`](https://www.zcao.space/ofeIntegrateR/reference/make_trial_design.md)
+  : Lay out an on-farm strip trial
+
+## Planning the sample
+
+How many point samples the target precision needs, and where they go.
+
 - [`kriging_sample_interval()`](https://www.zcao.space/ofeIntegrateR/reference/kriging_sample_interval.md)
   : How far apart should the samples be, and how many are needed?
 - [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md)

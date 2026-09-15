@@ -9,12 +9,12 @@
 Source:
 [`DESCRIPTION`](https://github.com/zhanglongcao/ofeIntegrateR/blob/main/DESCRIPTION)
 
-Cao Z (2026). *ofeIntegrateR: Integrate Point-Source and High-Resolution
-Spatial Data in On-Farm Experiments*. R package version 0.1.0,
+Cao Z (2026). *ofeIntegrateR: Design, Sample and Analyse On-Farm Strip
+Experiments*. R package version 0.1.0,
 <https://github.com/zhanglongcao/ofeIntegrateR>.
 
     @Manual{,
-      title = {ofeIntegrateR: Integrate Point-Source and High-Resolution Spatial Data in On-Farm Experiments},
+      title = {ofeIntegrateR: Design, Sample and Analyse On-Farm Strip Experiments},
       author = {Zhanglong Cao},
       year = {2026},
       note = {R package version 0.1.0},

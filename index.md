@@ -1,9 +1,9 @@
 # ofeIntegrateR
 
-Tools for integrating sparse point-source measurements (e.g. soil cores,
-tissue samples, disease ratings) with dense spatial covariates
-(e.g. EM38 surveys, yield maps) in on-farm experimentation (OFE) strip
-trials.
+A workflow for on-farm experimentation (OFE) strip trials, from planning
+a trial to estimating its treatment effects — including integrating
+sparse point-source measurements (soil cores, tissue samples, disease
+ratings) with dense spatial layers (yield maps, EM38 surveys).
 
 Developed for the AAGI-CU-RD-OFE GRDC project (“Development of processes
 to integrate point-source data and high-resolution data”).
@@ -15,7 +15,7 @@ when licensed, but nothing here requires a commercial licence.
 
 | Stage | Function |
 |----|----|
-| Lay out a planned trial | [`make_trial_grid()`](https://www.zcao.space/ofeIntegrateR/reference/make_trial_grid.md) |
+| Lay out the trial: strip or stacked, randomised or systematic | [`make_trial_design()`](https://www.zcao.space/ofeIntegrateR/reference/make_trial_design.md) |
 | Work out how many cores the target precision needs | [`kriging_sample_interval()`](https://www.zcao.space/ofeIntegrateR/reference/kriging_sample_interval.md) |
 | Decide where the cores go | [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md) |
 | Get irregular yield-monitor data onto an estimable lattice | [`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md) |
