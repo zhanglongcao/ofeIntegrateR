@@ -25,15 +25,16 @@ Depends:
 Imports:
     gstat,
     nlme,
-    sommer,
     sp,
     stats
 Suggests:
     asreml,
     knitr,
     rmarkdown,
+    sommer,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/zhanglongcao/ofeIntegrateR
+URL: https://github.com/zhanglongcao/ofeIntegrateR,
+    https://zhanglongcao.github.io/ofeIntegrateR/
 BugReports: https://github.com/zhanglongcao/ofeIntegrateR/issues

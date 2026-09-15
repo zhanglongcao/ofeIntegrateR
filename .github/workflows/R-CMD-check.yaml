@@ -43,13 +43,17 @@ jobs:
         with:
           # 'asreml' is a commercial Suggests not available on any public
           # repo; pak cannot resolve it, so we restrict the dependency
-          # install to hard deps (Imports/LinkingTo) plus testthat, rather
-          # than the default "all" (which includes Suggests and would try
-          # to install asreml and fail).
+          # install to hard deps (Imports/LinkingTo) and name the Suggests
+          # we actually need, rather than the default "all" (which includes
+          # asreml and would fail). knitr/rmarkdown build the vignette;
+          # sommer is needed by the joint-model tests.
           dependencies: 'c("Imports", "LinkingTo")'
           extra-packages: |
             any::rcmdcheck
             any::testthat
+            any::knitr
+            any::rmarkdown
+            any::sommer
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2

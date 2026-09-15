@@ -44,6 +44,7 @@ build_long_layers <- function(grid, point_samples, response_dense, response_poin
 #' @noRd
 fit_joint_sommer <- function(grid, point_samples, response_dense, response_point,
                               treat, row, col, cor_structure, ...) {
+  check_sommer()
   wide <- grid
   wide$unit <- factor(paste(wide[[row]], wide[[col]], sep = "_"))
   wide[[response_point]] <- NA_real_

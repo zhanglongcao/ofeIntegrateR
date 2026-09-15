@@ -1,0 +1,61 @@
+url: https://zhanglongcao.github.io/ofeIntegrateR/
+
+template:
+  bootstrap: 5
+
+home:
+  title: Integrate point-source and high-resolution data in on-farm experiments
+  description: >
+    Combine sparse soil, tissue or disease samples with dense yield-monitor and
+    sensor layers to estimate treatment effects in on-farm experimentation strip
+    trials. Every step has an open-source path.
+
+reference:
+- title: Designing the sample
+  desc: >
+    The sample count fixes the cost, so the design question is where the cores
+    should go.
+  contents:
+  - place_point_samples
+
+- title: Preparing the data
+  desc: >
+    Getting an irregular yield-monitor cloud onto the lattice a spatial model
+    needs, and interpolating the sparse layer onto the same grid.
+  contents:
+  - grid_dense_layer
+  - krige_point_samples
+
+- title: Checking the point layer
+  desc: >
+    Whether the samples are dense enough to reconstruct their own surface.
+  contents:
+  - cv_krige_surface
+
+- title: Estimating the treatment effect
+  desc: >
+    The two integration strategies, the free baseline they are judged against,
+    and a model-agnostic way to read the contrasts out.
+  contents:
+  - compare_integration
+  - fit_integrated_kriged
+  - fit_integrated_joint
+  - extract_fixed_effects
+
+- title: Simulating trials
+  desc: >
+    A tidy lattice for quick tests, and the awkward shape a real harvester
+    produces for testing the full pipeline.
+  contents:
+  - simulate_ofe_trial
+  - simulate_yield_monitor
+
+- title: Package
+  contents:
+  - ofeIntegrateR-package
+
+articles:
+- title: Get started
+  navbar: ~
+  contents:
+  - ofe-integration

@@ -42,6 +42,19 @@ First release.
   raw yield-monitor points to a treatment contrast, using open-source engines
   throughout.
 
+## Infrastructure
+
+* `sommer` moved from Imports to Suggests. It is only needed for the
+  open-source joint-model engine and compiles C++ at install time, so users who
+  only want the kriged-covariate route no longer pay for a build they will never
+  call. `engine = "sommer"` now fails with a clear message if it is absent.
+
+* Added a pkgdown site (`_pkgdown.yml`) with the reference index organised by
+  pipeline stage, and a workflow to publish it to GitHub Pages.
+
+* The R-CMD-check workflow now installs `knitr`, `rmarkdown` and `sommer`
+  explicitly, so the vignette builds and the joint-model tests run in CI.
+
 ## Bug fixes
 
 * `fit_integrated_kriged()` silently dropped all but the first covariate when

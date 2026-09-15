@@ -10,3 +10,5 @@
 /Meta/
 vignettes/*.R
 vignettes/*.html
+# pkgdown site built locally
+/docs/

@@ -19,3 +19,25 @@ check_asreml <- function() {
     )
   }
 }
+
+#' Check that sommer is available, with an informative error
+#'
+#' `sommer` is only needed for the open-source joint-model engine, and it
+#' compiles C++ at install time, so it is a Suggests rather than a hard
+#' dependency: users who only want the kriged-covariate route should not pay
+#' for a build they will never call.
+#'
+#' @keywords internal
+#' @noRd
+check_sommer <- function() {
+  if (!requireNamespace("sommer", quietly = TRUE)) {
+    stop(
+      "`engine = \"sommer\"` requires the 'sommer' package, which is not ",
+      "installed.\n",
+      "Install it with install.packages(\"sommer\"), or use ",
+      "`fit_integrated_kriged()` with engine = \"gls\" for an open-source ",
+      "route that needs no extra dependency.",
+      call. = FALSE
+    )
+  }
+}
