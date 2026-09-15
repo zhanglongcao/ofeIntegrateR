@@ -56,12 +56,7 @@ licence:
   krige the sparse point-source variable onto the trial grid with
   [`krige_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/krige_point_samples.md),
   then include the kriged surface as a fixed covariate in a spatial
-  model of the dense response. `engine = "asreml"` fits an
-  `ar1(row):ar1(col)` residual via asreml-R; `engine = "gls"` (open
-  source) fits an exponential spatial correlation structure via
-  [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html);
-  `engine = "lm"` (open source) ignores spatial autocorrelation entirely
-  — the simplest but weakest fallback. Pass `covariate = NULL` for the
+  model of the dense response. Pass `covariate = NULL` for the
   dense-layer-only baseline, and several covariate names to integrate
   more than one point variable at once.
 - **Joint bivariate model**
@@ -73,6 +68,41 @@ licence:
   via [`sommer::mmer()`](https://rdrr.io/pkg/sommer/man/mmer.html). In
   testing, the sommer fit reproduced the asreml treatment-contrast
   estimates almost exactly.
+
+## Choosing an engine
+
+Real strip trials are replicated, so the analysis usually needs a random
+effect. Both `asreml` and `lme` take one, with the same spelling:
+
+| `engine` | Fitted by | Random effects | Spatial residual | Licence |
+|----|----|----|----|----|
+| `"asreml"` | `asreml::asreml()` | yes | `ar1(row):ar1(col)` | commercial |
+| `"lme"` | [`nlme::lme()`](https://rdrr.io/pkg/nlme/man/lme.html) | yes | exponential + nugget | open source |
+| `"gls"` | [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html) | no | exponential + nugget | open source |
+| `"lm"` | [`stats::lm()`](https://rdrr.io/r/stats/lm.html) | no | none | open source |
+
+``` r
+
+# The same call on either engine
+fit_integrated_kriged(kr, response = "yield", treat = "treat",
+                      covariate = "soil_n_kriged",
+                      random = ~ rep, engine = "lme")     # or "asreml"
+```
+
+`"lme"` is the open-source counterpart to the asreml fit: random effects
+*and* a spatial correlation structure. `"gls"` has the spatial structure
+but no random effects, and `"lm"` has neither — asking either of them
+for a random effect is an error rather than something silently dropped.
+
+For the joint bivariate model,
+[`fit_integrated_joint()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_joint.md)
+uses `asreml::asreml()` or the open-source
+[`sommer::mmer()`](https://rdrr.io/pkg/sommer/man/mmer.html).
+
+[`extract_fixed_effects()`](https://www.zcao.space/ofeIntegrateR/reference/extract_fixed_effects.md)
+returns the same tidy table for an `lm`, `gls`, `lme`, `asreml` or
+`mmer` fit, so downstream code does not change when a licence appears or
+disappears.
 
 ## Always report the baseline
 

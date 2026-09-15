@@ -15,9 +15,10 @@ fit_integrated_kriged(
   response,
   treat,
   covariate = NULL,
+  random = NULL,
   row = "row",
   col = "col",
-  engine = c("asreml", "gls", "lm"),
+  engine = c("asreml", "lme", "gls", "lm"),
   ...
 )
 ```
@@ -48,6 +49,14 @@ fit_integrated_kriged(
   baseline that an integrated analysis has to beat, since it uses only
   the dense layer and costs no sampling.
 
+- random:
+
+  Optional one-sided formula of random effects, such as `~ rep` or
+  `~ block`. Real strip trials are replicated, so this is usually
+  needed. Supported by `engine = "asreml"` and `engine = "lme"`; the
+  `"gls"` and `"lm"` engines cannot fit random effects and raise an
+  error rather than ignoring the argument.
+
 - row, col:
 
   Character; names of the row/column position columns used to build the
@@ -57,8 +66,12 @@ fit_integrated_kriged(
 
   Character; `"asreml"` (default) fits `response ~ treat + covariate`
   with an `ar1(row):ar1(col)` residual via `asreml::asreml()` — requires
-  a licensed copy of asreml-R. `"gls"` fits the same fixed-effects model
-  via [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html) with an
+  a licensed copy of asreml-R. `"lme"` fits random effects **and** an
+  exponential spatial correlation via
+  [`nlme::lme()`](https://rdrr.io/pkg/nlme/man/lme.html), which is the
+  open-source counterpart to the asreml fit for a replicated trial.
+  `"gls"` fits the same fixed-effects model via
+  [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html) with an
   exponential spatial correlation structure
   ([`nlme::corExp()`](https://rdrr.io/pkg/nlme/man/corExp.html) on
   `row`/`col`) — an open-source (CRAN-only, no licence required)
@@ -71,6 +84,7 @@ fit_integrated_kriged(
 - ...:
 
   Additional arguments passed to `asreml::asreml()` (e.g. `maxit`),
+  [`nlme::lme()`](https://rdrr.io/pkg/nlme/man/lme.html),
   [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html), or
   [`stats::lm()`](https://rdrr.io/r/stats/lm.html).
 

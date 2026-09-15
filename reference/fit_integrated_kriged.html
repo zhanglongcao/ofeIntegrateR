@@ -64,9 +64,10 @@ the dense response.</p>
 <span>  <span class="va">response</span>,</span>
 <span>  <span class="va">treat</span>,</span>
 <span>  covariate <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  random <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  row <span class="op">=</span> <span class="st">"row"</span>,</span>
 <span>  col <span class="op">=</span> <span class="st">"col"</span>,</span>
-<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"asreml"</span>, <span class="st">"gls"</span>, <span class="st">"lm"</span><span class="op">)</span>,</span>
+<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"asreml"</span>, <span class="st">"lme"</span>, <span class="st">"gls"</span>, <span class="st">"lm"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -99,6 +100,14 @@ this is the baseline that an integrated analysis has to beat, since it
 uses only the dense layer and costs no sampling.</p></dd>
 
 
+<dt id="arg-random">random<a class="anchor" aria-label="anchor" href="#arg-random"></a></dt>
+<dd><p>Optional one-sided formula of random effects, such as
+<code>~ rep</code> or <code>~ block</code>. Real strip trials are replicated, so this is usually
+needed. Supported by <code>engine = "asreml"</code> and <code>engine = "lme"</code>; the <code>"gls"</code>
+and <code>"lm"</code> engines cannot fit random effects and raise an error rather
+than ignoring the argument.</p></dd>
+
+
 <dt id="arg-row-col">row, col<a class="anchor" aria-label="anchor" href="#arg-row-col"></a></dt>
 <dd><p>Character; names of the row/column position columns used
 to build the spatial residual structure. Ignored when <code>engine = "lm"</code>.</p></dd>
@@ -107,7 +116,10 @@ to build the spatial residual structure. Ignored when <code>engine = "lm"</code>
 <dt id="arg-engine">engine<a class="anchor" aria-label="anchor" href="#arg-engine"></a></dt>
 <dd><p>Character; <code>"asreml"</code> (default) fits
 <code>response ~ treat + covariate</code> with an <code>ar1(row):ar1(col)</code> residual via
-<code>asreml::asreml()</code> — requires a licensed copy of asreml-R. <code>"gls"</code> fits
+<code>asreml::asreml()</code> — requires a licensed copy of asreml-R. <code>"lme"</code> fits
+random effects <strong>and</strong> an exponential spatial correlation via
+<code><a href="https://rdrr.io/pkg/nlme/man/lme.html" class="external-link">nlme::lme()</a></code>, which is the open-source counterpart to the asreml fit for
+a replicated trial. <code>"gls"</code> fits
 the same fixed-effects model via <code><a href="https://rdrr.io/pkg/nlme/man/gls.html" class="external-link">nlme::gls()</a></code> with an exponential
 spatial correlation structure (<code><a href="https://rdrr.io/pkg/nlme/man/corExp.html" class="external-link">nlme::corExp()</a></code> on <code>row</code>/<code>col</code>) — an
 open-source (CRAN-only, no licence required) alternative that still
@@ -119,7 +131,7 @@ residual spatial autocorrelation.</p></dd>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code>asreml::asreml()</code> (e.g.
-<code>maxit</code>), <code><a href="https://rdrr.io/pkg/nlme/man/gls.html" class="external-link">nlme::gls()</a></code>, or <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code>.</p></dd>
+<code>maxit</code>), <code><a href="https://rdrr.io/pkg/nlme/man/lme.html" class="external-link">nlme::lme()</a></code>, <code><a href="https://rdrr.io/pkg/nlme/man/gls.html" class="external-link">nlme::gls()</a></code>, or <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
