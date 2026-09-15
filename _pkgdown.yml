@@ -11,11 +11,13 @@ home:
     trials. Every step has an open-source path.
 
 reference:
-- title: Designing the sample
+- title: Planning the trial and the sample
   desc: >
-    The sample count fixes the cost, so the design question is where the cores
-    should go.
+    Before the season: lay out the trial, work out how many cores the target
+    precision needs, and choose where they go.
   contents:
+  - make_trial_grid
+  - kriging_sample_interval
   - place_point_samples
 
 - title: Preparing the data

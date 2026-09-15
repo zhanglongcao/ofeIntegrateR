@@ -18,6 +18,8 @@ licensed, but nothing here requires a commercial licence.
 
 | Stage | Function |
 |---|---|
+| Lay out a planned trial | `make_trial_grid()` |
+| Work out how many cores the target precision needs | `kriging_sample_interval()` |
 | Decide where the cores go | `place_point_samples()` |
 | Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
 | Interpolate the sparse layer onto that lattice | `krige_point_samples()` |

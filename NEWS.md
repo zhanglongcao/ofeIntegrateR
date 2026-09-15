@@ -11,6 +11,18 @@ First release.
   stratified placement are the ones to use when the samples will build a
   covariate surface.
 
+* `kriging_sample_interval()` answers the question that has to be settled
+  before a sampling budget is set: given a variogram and a target precision,
+  how far apart should the cores be, and how many does that imply for the
+  trial's area? It also reports the floor the nugget imposes — the precision no
+  sampling density can beat — which is often the more useful number, because it
+  says whether the target is worth budgeting for at all.
+
+* `make_trial_grid()` lays out a planned trial as a lattice with treatment
+  strips, so sampling locations can be chosen before any yield data exist. Its
+  output has the same shape as `grid_dense_layer()`, so the same code works
+  before and after harvest.
+
 * `cv_krige_surface()` cross-validates the kriged point-source surface, so a
   trial team can tell whether its point layer is dense enough to reconstruct
   itself. It is a sampling diagnostic, not a verdict on an analysis.

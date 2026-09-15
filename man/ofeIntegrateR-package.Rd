@@ -38,7 +38,7 @@ high-resolution data}).
 Useful links:
 \itemize{
   \item \url{https://github.com/zhanglongcao/ofeIntegrateR}
-  \item \url{https://zhanglongcao.github.io/ofeIntegrateR/}
+  \item \url{https://www.zcao.space/ofeIntegrateR/}
   \item Report bugs at \url{https://github.com/zhanglongcao/ofeIntegrateR/issues}
 }
 
