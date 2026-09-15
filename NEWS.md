@@ -75,6 +75,17 @@ First release.
 * The R-CMD-check workflow now installs `knitr`, `rmarkdown` and `sommer`
   explicitly, so the vignette builds and the joint-model tests run in CI.
 
+* New `engine = "lme"` for `fit_integrated_kriged()`, and `random` is now a
+  first-class argument rather than something passed through `...`. This closes
+  a gap that undermined the open-source path: `asreml` could fit a replicate or
+  block effect, `gls` could not, and `lm` accepted the argument and silently
+  discarded it. `lme` fits random effects together with the spatial correlation
+  structure, so the open-source route is a genuine counterpart to the asreml
+  one. `gls` and `lm` now raise an informative error instead of failing
+  obscurely or ignoring the request. The asreml spelling `random = ~ rep` is
+  translated to the grouping formula `lme` expects, so the same call works on
+  both engines.
+
 ## Bug fixes
 
 * `fit_integrated_kriged()` silently dropped all but the first covariate when

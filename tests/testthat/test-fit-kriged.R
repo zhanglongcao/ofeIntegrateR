@@ -137,3 +137,72 @@ test_that("covariate = NULL fits the dense-layer-only baseline on every engine",
     expect_true(all(is.finite(fx$estimate)), info = eng)
   }
 })
+
+test_that("the lme engine fits random effects with a spatial residual", {
+  sim <- simulate_ofe_trial(n_row = 24, n_col = 12, n_point_samples = 20,
+                            seed = 3)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+  kr$rep <- factor(ceiling(kr$row / 8))
+
+  fit <- fit_integrated_kriged(kr, "dense_response", "treat",
+                               "point_obs_kriged", random = ~ rep,
+                               engine = "lme")
+  expect_s3_class(fit, "lme")
+
+  fx <- extract_fixed_effects(fit)
+  est <- fx$estimate[grepl("treatC$", fx$term)][1]
+  expect_equal(est, 1.6, tolerance = 0.5)
+  expect_true(all(is.finite(fx$se)))
+})
+
+test_that("the asreml spelling of `random` works on lme too", {
+  sim <- simulate_ofe_trial(n_row = 24, n_col = 12, n_point_samples = 20,
+                            seed = 3)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+  kr$rep <- factor(ceiling(kr$row / 8))
+
+  short <- fit_integrated_kriged(kr, "dense_response", "treat",
+                                 "point_obs_kriged", random = ~ rep,
+                                 engine = "lme")
+  explicit <- fit_integrated_kriged(kr, "dense_response", "treat",
+                                    "point_obs_kriged", random = ~ 1 | rep,
+                                    engine = "lme")
+  expect_equal(extract_fixed_effects(short)$estimate,
+               extract_fixed_effects(explicit)$estimate, tolerance = 1e-8)
+})
+
+test_that("engines that cannot fit random effects say so instead of ignoring them", {
+  sim <- simulate_ofe_trial(n_row = 20, n_col = 12, n_point_samples = 15,
+                            seed = 5)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+  kr$rep <- factor(ceiling(kr$row / 5))
+
+  for (eng in c("gls", "lm")) {
+    expect_error(
+      fit_integrated_kriged(kr, "dense_response", "treat", "point_obs_kriged",
+                            random = ~ rep, engine = eng),
+      "cannot fit random effects", info = eng)
+  }
+})
+
+test_that("lme requires a random formula and points at gls when there is none", {
+  sim <- simulate_ofe_trial(n_row = 20, n_col = 12, n_point_samples = 15,
+                            seed = 5)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+  expect_error(
+    fit_integrated_kriged(kr, "dense_response", "treat", "point_obs_kriged",
+                          engine = "lme"),
+    "needs a `random` formula")
+})
+
+test_that("ambiguous multi-factor random formulas are refused, not guessed", {
+  sim <- simulate_ofe_trial(n_row = 24, n_col = 12, n_point_samples = 20,
+                            seed = 3)
+  kr <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
+  kr$rep <- factor(ceiling(kr$row / 8))
+  kr$blk <- factor(ceiling(kr$col / 4))
+  expect_error(
+    fit_integrated_kriged(kr, "dense_response", "treat", "point_obs_kriged",
+                          random = ~ rep + blk, engine = "lme"),
+    "nesting made explicit")
+})

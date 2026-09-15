@@ -13,7 +13,7 @@ extract_fixed_effects(model)
 A data frame with columns \code{term}, \code{estimate}, \code{se}.
 }
 \description{
-Works for \code{lm}, \code{gls}, \code{asreml}, and \code{mmer} model objects, so the same
+Works for \code{lm}, \code{gls}, \code{lme}, \code{asreml}, and \code{mmer} model objects, so the same
 downstream code can summarise treatment contrasts regardless of which
 \code{engine} was used in \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}} or \code{\link[=fit_integrated_joint]{fit_integrated_joint()}}.
 }

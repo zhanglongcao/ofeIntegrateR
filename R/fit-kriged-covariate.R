@@ -23,7 +23,10 @@
 #'   to build the spatial residual structure. Ignored when `engine = "lm"`.
 #' @param engine Character; `"asreml"` (default) fits
 #'   `response ~ treat + covariate` with an `ar1(row):ar1(col)` residual via
-#'   [asreml::asreml()] — requires a licensed copy of asreml-R. `"gls"` fits
+#'   [asreml::asreml()] — requires a licensed copy of asreml-R. `"lme"` fits
+#'   random effects **and** an exponential spatial correlation via
+#'   [nlme::lme()], which is the open-source counterpart to the asreml fit for
+#'   a replicated trial. `"gls"` fits
 #'   the same fixed-effects model via [nlme::gls()] with an exponential
 #'   spatial correlation structure ([nlme::corExp()] on `row`/`col`) — an
 #'   open-source (CRAN-only, no licence required) alternative that still
@@ -31,8 +34,13 @@
 #'   fixed-effects model via [stats::lm()] with no spatial residual
 #'   structure at all — the simplest fallback, but does not account for
 #'   residual spatial autocorrelation.
+#' @param random Optional one-sided formula of random effects, such as
+#'   `~ rep` or `~ block`. Real strip trials are replicated, so this is usually
+#'   needed. Supported by `engine = "asreml"` and `engine = "lme"`; the `"gls"`
+#'   and `"lm"` engines cannot fit random effects and raise an error rather
+#'   than ignoring the argument.
 #' @param ... Additional arguments passed to [asreml::asreml()] (e.g.
-#'   `maxit`), [nlme::gls()], or [stats::lm()].
+#'   `maxit`), [nlme::lme()], [nlme::gls()], or [stats::lm()].
 #'
 #' @return The fitted model object (class `asreml`, `gls`, or `lm`). Use
 #'   [extract_fixed_effects()] to retrieve a tidy table of fixed-effect
@@ -54,10 +62,41 @@
 #' }
 #'
 #' @export
+# asreml takes `random = ~ rep`; nlme::lme wants a grouping formula,
+# `~ 1 | rep`. Accepting the asreml spelling on both engines is the point of a
+# common interface, so translate rather than making the caller remember which
+# is which. A formula that already names a grouping factor is passed through.
+as_lme_random <- function(random) {
+  if (inherits(random, "formula") && length(random) == 2L) {
+    rhs <- random[[2]]
+    if (!(is.call(rhs) && identical(as.character(rhs[[1]]), "|"))) {
+      terms_chr <- attr(stats::terms(random), "term.labels")
+      if (length(terms_chr) == 0L) {
+        stop("`random` names no grouping factor.", call. = FALSE)
+      }
+      if (length(terms_chr) > 1L) {
+        stop("`engine = \"lme\"` needs the nesting made explicit for more ",
+             "than one grouping factor, e.g. random = ~ 1 | block/plot ",
+             "instead of ~ block + plot.", call. = FALSE)
+      }
+      return(stats::as.formula(paste("~ 1 |", terms_chr)))
+    }
+  }
+  random
+}
+
 fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
+                                   random = NULL,
                                    row = "row", col = "col",
-                                   engine = c("asreml", "gls", "lm"), ...) {
+                                   engine = c("asreml", "lme", "gls", "lm"),
+                                   ...) {
   engine <- match.arg(engine)
+  if (!is.null(random) && engine %in% c("gls", "lm")) {
+    stop("`engine = \"", engine, "\"` cannot fit random effects. Use ",
+         "engine = \"lme\" for an open-source fit with both random effects ",
+         "and a spatial correlation structure, or engine = \"asreml\" if ",
+         "licensed.", call. = FALSE)
+  }
   needed <- c(response, treat, covariate)
   missing_cols <- setdiff(needed, names(data))
   if (length(missing_cols) > 0) {
@@ -78,6 +117,29 @@ fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
 
   if (engine == "lm") {
     return(stats::lm(fixed, data = data, ...))
+  }
+
+  if (engine == "lme") {
+    # lme carries both a random-effects structure and a spatial correlation on
+    # the residual, so it is the open-source counterpart to the asreml fit for
+    # a replicated trial. gls has the correlation but no random effects.
+    if (is.null(random)) {
+      stop("`engine = \"lme\"` needs a `random` formula, e.g. random = ~ rep. ",
+           "With no random effects use engine = \"gls\", which fits the same ",
+           "spatial correlation structure.", call. = FALSE)
+    }
+    data$.row_num <- as.numeric(as.character(data[[row]]))
+    data$.col_num <- as.numeric(as.character(data[[col]]))
+    dots <- list(...)
+    if (is.null(dots$na.action)) dots$na.action <- stats::na.omit
+    return(do.call(nlme::lme, c(
+      list(fixed = fixed,
+           data = data,
+           random = as_lme_random(random),
+           correlation = nlme::corExp(form = ~ .row_num + .col_num,
+                                      nugget = TRUE)),
+      dots
+    )))
   }
 
   if (engine == "gls") {
@@ -105,18 +167,15 @@ fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
   data[[col]] <- as.factor(data[[col]])
   residual <- stats::as.formula(paste0("~ ar1(", row, "):ar1(", col, ")"))
 
-  asreml::asreml(
-    fixed = fixed,
-    residual = residual,
-    data = data,
-    trace = FALSE,
-    ...
-  )
+  asreml_args <- list(fixed = fixed, residual = residual, data = data,
+                      trace = FALSE)
+  if (!is.null(random)) asreml_args$random <- random
+  do.call(asreml::asreml, c(asreml_args, list(...)))
 }
 
 #' Extract a tidy table of fixed-effect estimates
 #'
-#' Works for `lm`, `gls`, `asreml`, and `mmer` model objects, so the same
+#' Works for `lm`, `gls`, `lme`, `asreml`, and `mmer` model objects, so the same
 #' downstream code can summarise treatment contrasts regardless of which
 #' `engine` was used in [fit_integrated_kriged()] or [fit_integrated_joint()].
 #'
@@ -140,6 +199,15 @@ extract_fixed_effects <- function(model) {
       term = rownames(cf),
       estimate = cf[, "solution"],
       se = cf[, "std error"],
+      row.names = NULL
+    ))
+  }
+  if (inherits(model, "lme")) {
+    cf <- summary(model)$tTable
+    return(data.frame(
+      term = rownames(cf),
+      estimate = cf[, "Value"],
+      se = cf[, "Std.Error"],
       row.names = NULL
     ))
   }
