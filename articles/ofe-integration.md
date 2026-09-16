@@ -176,15 +176,15 @@ fits both and lines them up.
 ``` r
 
 cmp <- compare_integration(kr, response = "yield", treat = "treat",
-                           covariate = "point_obs_kriged", engine = "gls")
+                           covariate = "point_obs_kriged")
 
 cmp[grepl("treat", cmp$term), ]
 #>     term baseline_estimate baseline_se integrated_estimate integrated_se
-#> 2 treatB         0.6639032  0.08448540            0.699747    0.07885479
-#> 3 treatC         1.3666055  0.09707601            1.407805    0.08832748
-#>   estimate_change    se_change
-#> 2      0.03584379 -0.005630609
-#> 3      0.04119903 -0.008748533
+#> 2 treatB         0.6142651   0.1018629            0.676549    0.08377874
+#> 3 treatC         1.3400755   0.1123979            1.391838    0.09039698
+#>   estimate_change   se_change
+#> 2      0.06228387 -0.01808416
+#> 3      0.05176207 -0.02200091
 ```
 
 Compare `baseline_estimate` and `integrated_estimate` against the truth
@@ -211,24 +211,169 @@ Pass several kriged surfaces and they all enter the model:
 ``` r
 
 fit_integrated_kriged(kr, response = "yield", treat = "treat",
-                      covariate = c("soil_n_kriged", "soil_p_kriged"),
-                      engine = "gls")
+                      covariate = c("soil_n_kriged", "soil_p_kriged"))
 ```
 
 ## Choosing an engine
 
-| `engine` | Spatial residual | Licence |
-|----|----|----|
-| `"asreml"` | `ar1(row):ar1(col)` | commercial |
-| `"gls"` | exponential, via [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html) | open source |
-| `"lm"` | none | open source |
+| `engine` | Spatial residual | Random effects | Licence |
+|----|----|----|----|
+| `"ofe"` (default) | `ar1(row):ar1(col)`, via [`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md) | yes | open source |
+| `"asreml"` | `ar1(row):ar1(col)` | yes | commercial |
+| `"lme"` | exponential, via [`nlme::lme()`](https://rdrr.io/pkg/nlme/man/lme.html) | yes | open source |
+| `"gls"` | exponential, via [`nlme::gls()`](https://rdrr.io/pkg/nlme/man/gls.html) | no | open source |
+| `"lm"` | none | no | open source |
 
-`"gls"` is the open-source workhorse. `"lm"` ignores spatial correlation
-entirely and is best kept as a diagnostic reference rather than a final
-model.
+`"ofe"` is the default: it fits the same separable AR1 model asreml
+does, in base R. `"lm"` ignores spatial correlation entirely and is best
+kept as a diagnostic reference rather than a final model.
 [`extract_fixed_effects()`](https://www.zcao.space/ofeIntegrateR/reference/extract_fixed_effects.md)
 returns the same tidy table whichever engine fitted the model, so
 downstream code does not change when a licence appears or disappears.
+
+## Step 4 — fit the model yourself
+
+[`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
+is a convenience wrapper. When you want a residual structure of your
+own, call
+[`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md)
+directly; it takes the asreml spellings, so the formula below is the one
+you would write for `asreml::asreml()`.
+
+``` r
+
+fit <- fit_ofe(yield ~ treat + point_obs_kriged, data = kr,
+               residual = ~ ar1(row):ar1(col))
+summary(fit)
+#> Spatial mixed model fitted by REML (ofeIntegrateR)
+#> 
+#> Fixed:     yield ~ treat + point_obs_kriged 
+#> Residual:  ~ar1(row):ar1(col) 
+#> 
+#> Observations: 318  Fixed parameters: 4  REML logLik: -151.128 
+#> 
+#> Variance parameters:
+#>           estimate std.error variance
+#> R!row!cor   0.4323   0.05410       NA
+#> R!col!cor   0.3737   0.05527       NA
+#> sigma2      0.2054   0.01639   0.2054
+#> 
+#> Fixed effects:
+#>                  estimate std.error      t      p
+#> (Intercept)       0.05705   0.07507  0.760  0.448
+#> treatB            0.67655   0.08378  8.075 <1e-04
+#> treatC            1.39184   0.09040 15.397 <1e-04
+#> point_obs_kriged  0.71165   0.08835  8.055 <1e-04
+#> 
+#> 6 row(s) dropped for missing values.
+```
+
+[`wald_tests()`](https://www.zcao.space/ofeIntegrateR/reference/wald_tests.md)
+tests each fixed term as a whole — the question a trial report asks —
+rather than one coefficient at a time:
+
+``` r
+
+wald_tests(fit)
+#>               term df      wald         F      p.value
+#> 1            treat  2 237.09564 118.54782 4.418959e-39
+#> 2 point_obs_kriged  1  64.88742  64.88742 1.666269e-14
+```
+
+and
+[`ofe_means()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_means.md)
+gives the treatment means, or the contrasts between them with the
+standard error of difference:
+
+``` r
+
+ofe_means(fit, "treat")
+#>   treat estimate  std.error        lower     upper
+#> 1     A 0.135865 0.07374326 -0.009228365 0.2809584
+#> 2     B 0.812414 0.07388445  0.667042833 0.9577852
+#> 3     C 1.527703 0.07506330  1.380012017 1.6753932
+ofe_means(fit, "treat", pairwise = TRUE)
+#>   contrast  estimate  std.error statistic      p.value
+#> 1    B - A 0.6765490 0.08377874  8.075425 1.453454e-14
+#> 2    C - A 1.3918376 0.09039698 15.396948 3.044251e-40
+#> 3    C - B 0.7152886 0.08428020  8.487031 8.519006e-16
+```
+
+## Step 5 — pseudo-environments
+
+A strip runs the length of the paddock, and the treatment effect at one
+end need not be the effect at the other.
+[`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+finds the zones from the data: it removes the treatment signal,
+collapses what is left to a profile along the trial, and segments that
+profile by dynamic programming.
+
+The guard against inventing zones is the spatial covariance. A smooth
+field always looks like it has regions; what matters is whether a region
+is wider than the correlation range, because anything narrower is one
+realisation of the same correlated surface. The practical range of a
+fitted exponential variogram therefore sets the minimum zone width, and
+caps how many zones are on offer.
+
+``` r
+
+z <- partition_pseudo_env(kr, response = "yield", along = "row",
+                          treat = "treat")
+p <- attr(z, "partition")
+c(range = p$range, min_width = p$min_zone_width,
+  most_zones_possible = p$max_zones_possible, chosen = p$n_zones)
+#>               range           min_width most_zones_possible              chosen 
+#>            3.959022            3.959022            3.000000            1.000000
+p$zones
+#>   zone start  end width   n
+#> 1    1   0.5 12.5    12 324
+```
+
+On this trial it returns a single zone, which is the right answer:
+nothing zone-like was simulated. The trial is only twelve rows deep and
+the fitted range is about four, so at most three zones were ever on
+offer, and BIC preferred none of them. A function that always found
+zones would be worse than useless.
+
+[`adaptive_residual()`](https://www.zcao.space/ofeIntegrateR/reference/adaptive_residual.md)
+then writes the residual structure those zones imply. It gives a zone
+`ar1()` only in the dimensions where it has extent: a zone one row deep
+would otherwise ask for an unidentifiable parameter and fail.
+
+``` r
+
+r <- adaptive_residual(z)
+r
+#> ~dsum(~ar1(row):ar1(col) | zone, levels = c("1"))
+#> attr(,"geometry")
+#>   zone   n n_row n_col            struct
+#> 1    1 324    12    27 ar1(row):ar1(col)
+#> attr(,"n_degenerate")
+#> [1] 0
+attr(r, "geometry")
+#>   zone   n n_row n_col            struct
+#> 1    1 324    12    27 ar1(row):ar1(col)
+```
+
+If more than one zone was found, fitting a zone-specific treatment
+effect is one call:
+
+``` r
+
+if (nlevels(z$zone) > 1) {
+  fit_z <- fit_ofe(yield ~ zone + zone:treat, data = z, residual = r)
+  wald_tests(fit_z)
+}
+```
+
+Two cautions. Zones found this way are a description of where the
+paddock differs, not proof of a boundary — a smooth field with no step
+in it is still split more often than not. And because the cuts were
+placed where the residuals already differed, a zone-by-treatment
+interaction estimated on self-derived zones is exploratory: use the
+zones freely for the residual structure, and confirm an interaction
+against an independent layer (elevation, EM38, last season’s yield) by
+passing that layer as `response` instead.
 
 ## When integration is not worth it
 

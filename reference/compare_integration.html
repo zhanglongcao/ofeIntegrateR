@@ -57,7 +57,7 @@ reports the treatment contrasts side by side.</p>
 <span>  <span class="va">covariate</span>,</span>
 <span>  row <span class="op">=</span> <span class="st">"row"</span>,</span>
 <span>  col <span class="op">=</span> <span class="st">"col"</span>,</span>
-<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"asreml"</span>, <span class="st">"gls"</span>, <span class="st">"lm"</span><span class="op">)</span>,</span>
+<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ofe"</span>, <span class="st">"asreml"</span>, <span class="st">"gls"</span>, <span class="st">"lm"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -86,7 +86,8 @@ the integrated fit.</p></dd>
 
 
 <dt id="arg-engine">engine<a class="anchor" aria-label="anchor" href="#arg-engine"></a></dt>
-<dd><p>Fitting engine, passed to <code><a href="fit_integrated_kriged.html">fit_integrated_kriged()</a></code>.</p></dd>
+<dd><p>Fitting engine, passed to <code><a href="fit_integrated_kriged.html">fit_integrated_kriged()</a></code>.
+Defaults to <code>"ofe"</code>, which needs no licence.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

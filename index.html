@@ -11,9 +11,9 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Design, sample and analyse on-farm strip experiments">
-<meta name="description" content="A workflow for OFE strip trials: lay out the design, plan the sampling, grid the yield-monitor data, and estimate treatment effects — optionally integrating sparse soil or tissue samples with the dense layer. Every step has an open-source path.
+<meta name="description" content="A workflow for OFE strip trials: lay out the design, plan the sampling, grid the yield-monitor data, find the pseudo-environments, and fit the spatial mixed model — optionally integrating sparse soil or tissue samples with the dense layer. Every step has an open-source path, including an ASReml-equivalent REML engine written in base R.
 ">
-<meta property="og:description" content="A workflow for OFE strip trials: lay out the design, plan the sampling, grid the yield-monitor data, and estimate treatment effects — optionally integrating sparse soil or tissue samples with the dense layer. Every step has an open-source path.
+<meta property="og:description" content="A workflow for OFE strip trials: lay out the design, plan the sampling, grid the yield-monitor data, find the pseudo-environments, and fit the spatial mixed model — optionally integrating sparse soil or tissue samples with the dense layer. Every step has an open-source path, including an ASReml-equivalent REML engine written in base R.
 ">
 </head>
 <body>
@@ -62,7 +62,7 @@
 
 <p>A workflow for on-farm experimentation (OFE) strip trials, from planning a trial to estimating its treatment effects — including integrating sparse point-source measurements (soil cores, tissue samples, disease ratings) with dense spatial layers (yield maps, EM38 surveys).</p>
 <p>Developed for the AAGI-CU-RD-OFE GRDC project (“Development of processes to integrate point-source data and high-resolution data”).</p>
-<p><strong>Every step has an open-source path.</strong> ASReml-R is used automatically when licensed, but nothing here requires a commercial licence.</p>
+<p><strong>Every step has an open-source path</strong>, including the analysis: <code><a href="reference/fit_ofe.html">fit_ofe()</a></code> is a REML engine with ASReml-style separable residual structures written in base R, and it reproduces <code>asreml::asreml()</code> to several significant figures. ASReml-R is used where licensed, but nothing here requires a commercial licence.</p>
 <div class="section level2">
 <h2 id="the-pipeline">The pipeline<a class="anchor" aria-label="anchor" href="#the-pipeline"></a>
 </h2>
@@ -101,6 +101,24 @@
 <td><code><a href="reference/cv_krige_surface.html">cv_krige_surface()</a></code></td>
 </tr>
 <tr>
+<td>Find the pseudo-environments the spatial covariance supports</td>
+<td><code><a href="reference/partition_pseudo_env.html">partition_pseudo_env()</a></code></td>
+</tr>
+<tr>
+<td>Write the residual structure those zones imply</td>
+<td><code><a href="reference/adaptive_residual.html">adaptive_residual()</a></code></td>
+</tr>
+<tr>
+<td>Fit the spatial mixed model by REML, no licence needed</td>
+<td><code><a href="reference/fit_ofe.html">fit_ofe()</a></code></td>
+</tr>
+<tr>
+<td>Test the fixed terms, and get predicted treatment means</td>
+<td>
+<code><a href="reference/wald_tests.html">wald_tests()</a></code>, <code><a href="reference/ofe_means.html">ofe_means()</a></code>
+</td>
+</tr>
+<tr>
 <td>Fit the baseline and the integrated model, and compare</td>
 <td><code><a href="reference/compare_integration.html">compare_integration()</a></code></td>
 </tr>
@@ -126,6 +144,74 @@
 <li>
 <code><a href="articles/real-data.html">vignette("real-data")</a></code> — the same workflow on <code><a href="https://kwstat.github.io/agridat/reference/lasrosas.corn.html" class="external-link">agridat::lasrosas.corn</a></code>, an on-farm nitrogen experiment from Argentina recorded by a yield monitor, where the data arrive in the state real data arrive in.</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="analysis-without-asreml">Analysis without asreml<a class="anchor" aria-label="anchor" href="#analysis-without-asreml"></a>
+</h2>
+<p><code><a href="reference/fit_ofe.html">fit_ofe()</a></code> fits a linear mixed model by residual maximum likelihood with a separable, ASReml-style residual structure — written in base R, so it installs anywhere:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">treat</span>, random <span class="op">=</span> <span class="op">~</span> <span class="va">rep</span>,</span>
+<span>               residual <span class="op">=</span> <span class="op">~</span> <span class="fu">ar1</span><span class="op">(</span><span class="va">row</span><span class="op">)</span><span class="op">:</span><span class="fu">ar1</span><span class="op">(</span><span class="va">col</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">g</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                      <span class="co"># variance parameters + fixed effects</span></span>
+<span><span class="fu"><a href="reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                   <span class="co"># like wald.asreml(): one test per term</span></span>
+<span><span class="fu"><a href="reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span>           <span class="co"># like predict.asreml(): treatment means</span></span>
+<span><span class="fu"><a href="reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>   <span class="co"># contrasts with their SEDs</span></span></code></pre></div>
+<p>The <code>residual</code> argument takes the asreml spellings, combined with <code>:</code> for a separable structure:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr>
+<th>Spelling</th>
+<th>Meaning</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+<code>id(f)</code>, or a bare <code>f</code>
+</td>
+<td>independent</td>
+</tr>
+<tr>
+<td><code>ar1(f)</code></td>
+<td>first-order autoregressive along the ordered levels of <code>f</code>
+</td>
+</tr>
+<tr>
+<td><code>exp(x)</code></td>
+<td>exponential correlation in a numeric coordinate</td>
+</tr>
+<tr>
+<td><code>diag(f)</code></td>
+<td>a separate variance for each level of <code>f</code>
+</td>
+</tr>
+<tr>
+<td><code>dsum(~ struct \| s, levels = )</code></td>
+<td>independent sections, each with its own parameters</td>
+</tr>
+</tbody>
+</table>
+<p>On the structures both support, <code><a href="reference/fit_ofe.html">fit_ofe()</a></code> and <code>asreml::asreml()</code> agree to several significant figures — variance components, fixed effects and their standard errors alike. Where a licence is available, <code>engine = "asreml"</code> still fits the identical model and is faster on large lattices; the engine here is dense, and factorises an n×n matrix at every iteration, so it is meant for OFE-sized problems (a few thousand lattice cells — aggregate with <code><a href="reference/grid_dense_layer.html">grid_dense_layer()</a></code> if you have more). It does not implement <code>us()</code>/<code>fa()</code> structures or multi-trait models.</p>
+<p>One difference in its favour: cells with a missing response are simply dropped. The correlation is evaluated from the row and column positions of whatever observations remain, so an incomplete lattice needs no padding — and a row absent from the data still counts as a lag rather than being closed up.</p>
+</div>
+<div class="section level2">
+<h2 id="pseudo-environments-derived-rather-than-guessed">Pseudo-environments, derived rather than guessed<a class="anchor" aria-label="anchor" href="#pseudo-environments-derived-rather-than-guessed"></a>
+</h2>
+<p>Strip trials are long, and a treatment effect at one end of the paddock need not be the effect at the other. <code><a href="reference/partition_pseudo_env.html">partition_pseudo_env()</a></code> cuts the trial into contiguous zones from the data: it removes the treatment signal, collapses the residual field to a profile along the trial, and segments that profile optimally by dynamic programming.</p>
+<p>What stops it inventing zones is the spatial covariance. Any smooth field looks like it has regions; the question is whether a region is wider than the correlation range, because anything narrower is one realisation of the same correlated surface rather than a distinct environment. So the practical range of a fitted exponential variogram becomes the minimum zone width, and caps the number of zones at <code>floor(trial length / range)</code>. Within that cap, BIC chooses.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/partition_pseudo_env.html">partition_pseudo_env</a></span><span class="op">(</span><span class="va">g</span>, response <span class="op">=</span> <span class="st">"yield"</span>, along <span class="op">=</span> <span class="st">"row"</span>, treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">range</span>      <span class="co"># what set the minimum zone width</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">zones</span>      <span class="co"># where the cuts fell, and how big each zone is</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">bic</span>        <span class="co"># the trade-off it chose from</span></span>
+<span></span>
+<span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/adaptive_residual.html">adaptive_residual</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>       <span class="co"># ~ dsum(~ ar1(row):ar1(col) | zone, levels = ...)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">zone</span> <span class="op">+</span> <span class="va">zone</span><span class="op">:</span><span class="va">treat</span>, data <span class="op">=</span> <span class="va">z</span>, residual <span class="op">=</span> <span class="va">r</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="reference/adaptive_residual.html">adaptive_residual()</a></code> exists because AR1 needs at least two levels in a dimension and real zones do not always have them: a narrow zone may be one row deep, and asking for <code>ar1()</code> there gives an unidentifiable parameter and a failed fit. Each zone gets <code>ar1()</code> only where it has extent, and <code>id()</code> elsewhere. The formula it writes is plain text that both <code><a href="reference/fit_ofe.html">fit_ofe()</a></code> and <code>asreml::asreml()</code> accept.</p>
+<p>Two cautions, both in <code><a href="reference/partition_pseudo_env.html">?partition_pseudo_env</a></code>. A smooth field with no step at all will still be split about two-thirds of the time under the defaults, so read a zone as “this part of the paddock behaves differently”, not as evidence of a boundary. And zones derived from the same yield data that then estimate zone-specific treatment effects will overstate those differences, because the boundaries were placed where the residuals already differed — use them for the residual structure freely, and confirm a zone-by-treatment interaction against an independent layer (elevation, EM38, a prior season’s yield) by passing that layer as <code>response</code> instead.</p>
 </div>
 <div class="section level2">
 <h2 id="two-integration-strategies">Two integration strategies<a class="anchor" aria-label="anchor" href="#two-integration-strategies"></a>
@@ -159,6 +245,14 @@
 </tr></thead>
 <tbody>
 <tr>
+<td>
+<code>"ofe"</code> (default)</td>
+<td><code><a href="reference/fit_ofe.html">fit_ofe()</a></code></td>
+<td>yes</td>
+<td><code>ar1(row):ar1(col)</code></td>
+<td>open source</td>
+</tr>
+<tr>
 <td><code>"asreml"</code></td>
 <td><code>asreml::asreml()</code></td>
 <td>yes</td>
@@ -188,14 +282,14 @@
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># The same call on either engine</span></span>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># The same call on any engine</span></span>
 <span><span class="fu"><a href="reference/fit_integrated_kriged.html">fit_integrated_kriged</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span>                      covariate <span class="op">=</span> <span class="st">"soil_n_kriged"</span>,</span>
-<span>                      random <span class="op">=</span> <span class="op">~</span> <span class="va">rep</span>, engine <span class="op">=</span> <span class="st">"lme"</span><span class="op">)</span>     <span class="co"># or "asreml"</span></span></code></pre></div>
-<p><code>"lme"</code> is the open-source counterpart to the asreml fit: random effects <em>and</em> a spatial correlation structure. <code>"gls"</code> has the spatial structure but no random effects, and <code>"lm"</code> has neither — asking either of them for a random effect is an error rather than something silently dropped.</p>
+<span>                      covariate <span class="op">=</span> <span class="st">"soil_n_kriged"</span>, random <span class="op">=</span> <span class="op">~</span> <span class="va">rep</span><span class="op">)</span></span></code></pre></div>
+<p><code>"ofe"</code> is the default because it fits the same <code>ar1(row):ar1(col)</code> model asreml does and needs no licence. <code>"asreml"</code> fits it faster on a large lattice. <code>"lme"</code> substitutes an exponential correlation for the separable AR1, <code>"gls"</code> has the correlation but no random effects, and <code>"lm"</code> has neither — asking either of the last two for a random effect is an error rather than something silently dropped.</p>
+<p>For a residual structure other than <code>ar1(row):ar1(col)</code> — pseudo-environment sections, a heterogeneous variance — call <code><a href="reference/fit_ofe.html">fit_ofe()</a></code> directly with your own <code>residual</code> formula.</p>
 <p>For the joint bivariate model, <code><a href="reference/fit_integrated_joint.html">fit_integrated_joint()</a></code> uses <code>asreml::asreml()</code> or the open-source <code><a href="https://rdrr.io/pkg/sommer/man/mmer.html" class="external-link">sommer::mmer()</a></code>.</p>
-<p><code><a href="reference/extract_fixed_effects.html">extract_fixed_effects()</a></code> returns the same tidy table for an <code>lm</code>, <code>gls</code>, <code>lme</code>, <code>asreml</code> or <code>mmer</code> fit, so downstream code does not change when a licence appears or disappears.</p>
+<p><code><a href="reference/extract_fixed_effects.html">extract_fixed_effects()</a></code> returns the same tidy table for an <code>ofe_fit</code>, <code>lm</code>, <code>gls</code>, <code>lme</code>, <code>asreml</code> or <code>mmer</code> fit, so downstream code does not change when a licence appears or disappears.</p>
 </div>
 <div class="section level2">
 <h2 id="always-report-the-baseline">Always report the baseline<a class="anchor" aria-label="anchor" href="#always-report-the-baseline"></a>
@@ -206,16 +300,16 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"zhanglongcao/ofeIntegrateR"</span><span class="op">)</span></span></code></pre></div>
 <p>Documentation: <a href="https://www.zcao.space/ofeIntegrateR/" class="uri">https://www.zcao.space/ofeIntegrateR/</a></p>
-<p>Everything works out of the box with open-source dependencies only (<code>engine = "lm"</code> / <code>"gls"</code> for <code><a href="reference/fit_integrated_kriged.html">fit_integrated_kriged()</a></code>, and <code>engine = "sommer"</code> for <code><a href="reference/fit_integrated_joint.html">fit_integrated_joint()</a></code>). The <code>engine = "asreml"</code> options additionally require <a href="https://vsni.co.uk/software/asreml-r" class="external-link">asreml-R</a>, a commercial package from VSNi that is <strong>not</strong> installed automatically — see VSNi for licensing.</p>
+<p>Everything works out of the box with open-source dependencies only: the default <code>engine = "ofe"</code> for <code><a href="reference/fit_integrated_kriged.html">fit_integrated_kriged()</a></code> and <code><a href="reference/fit_ofe.html">fit_ofe()</a></code>, and <code>engine = "sommer"</code> for <code><a href="reference/fit_integrated_joint.html">fit_integrated_joint()</a></code>. The <code>engine = "asreml"</code> options additionally require <a href="https://vsni.co.uk/software/asreml-r" class="external-link">asreml-R</a>, a commercial package from VSNi that is <strong>not</strong> installed automatically — see VSNi for licensing.</p>
 </div>
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zhanglongcao/ofeIntegrateR" class="external-link">ofeIntegrateR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># A trial as a yield monitor actually records it: points along passes,</span></span>
@@ -239,7 +333,12 @@
 <span></span>
 <span><span class="co"># 4. Baseline vs integrated, side by side</span></span>
 <span><span class="fu"><a href="reference/compare_integration.html">compare_integration</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span>                    covariate <span class="op">=</span> <span class="st">"point_obs_kriged"</span>, engine <span class="op">=</span> <span class="st">"gls"</span><span class="op">)</span></span></code></pre></div>
+<span>                    covariate <span class="op">=</span> <span class="st">"point_obs_kriged"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 5. Or fit the spatial model directly, with the structure you want</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">treat</span>, data <span class="op">=</span> <span class="va">kr</span>, residual <span class="op">=</span> <span class="op">~</span> <span class="fu">ar1</span><span class="op">(</span><span class="va">row</span><span class="op">)</span><span class="op">:</span><span class="fu">ar1</span><span class="op">(</span><span class="va">col</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="notes-on-asreml-r-behaviour">Notes on asreml-R behaviour<a class="anchor" aria-label="anchor" href="#notes-on-asreml-r-behaviour"></a>

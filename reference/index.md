@@ -33,6 +33,42 @@ Whether the samples are dense enough to reconstruct their own surface.
 - [`cv_krige_surface()`](https://www.zcao.space/ofeIntegrateR/reference/cv_krige_surface.md)
   : Cross-validate a kriged point-source surface
 
+## Fitting the spatial model
+
+A REML engine with ASReml-style residual structures, written in base R,
+plus the tests and predicted means that go with it.
+
+- [`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md)
+  : Fit a spatial mixed model without asreml
+
+- [`ofe_control()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_control.md)
+  :
+
+  Control parameters for
+  [`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md)
+
+- [`summary(`*`<ofe_fit>`*`)`](https://www.zcao.space/ofeIntegrateR/reference/summary.ofe_fit.md)
+  :
+
+  Summarise a fitted `ofe_fit`
+
+- [`wald_tests()`](https://www.zcao.space/ofeIntegrateR/reference/wald_tests.md)
+  : Wald tests of the fixed-effect terms
+
+- [`ofe_means()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_means.md)
+  : Predicted means for a fixed term
+
+## Finding pseudo-environments
+
+Cutting the trial into zones the spatial covariance can actually
+support, and writing the residual structure that follows from them.
+
+- [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+  : Derive pseudo-environments from the spatial pattern of the dense
+  layer
+- [`adaptive_residual()`](https://www.zcao.space/ofeIntegrateR/reference/adaptive_residual.md)
+  : Build a residual structure that matches the realised geometry
+
 ## Estimating the treatment effect
 
 The two integration strategies, the free baseline they are judged
@@ -62,5 +98,4 @@ produces for testing the full pipeline.
 
 - [`ofeIntegrateR`](https://www.zcao.space/ofeIntegrateR/reference/ofeIntegrateR-package.md)
   [`ofeIntegrateR-package`](https://www.zcao.space/ofeIntegrateR/reference/ofeIntegrateR-package.md)
-  : ofeIntegrateR: Integrate Point-Source and High-Resolution Spatial
-  Data in On-Farm Experiments
+  : ofeIntegrateR: Design, Sample and Analyse On-Farm Strip Experiments

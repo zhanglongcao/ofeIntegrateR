@@ -115,6 +115,73 @@
         </dt>
         <dd>Cross-validate a kriged point-source surface</dd>
       </dl></div><div class="section level2">
+      <h2 id="fitting-the-spatial-model">Fitting the spatial model<a class="anchor" aria-label="anchor" href="#fitting-the-spatial-model"></a></h2>
+
+      <div class="section-desc"><p>A REML engine with ASReml-style residual structures, written in base R, plus the tests and predicted means that go with it.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="fit_ofe.html">fit_ofe()</a></code>
+
+        </dt>
+        <dd>Fit a spatial mixed model without asreml</dd>
+
+        <dt>
+
+          <code><a href="ofe_control.html">ofe_control()</a></code>
+
+        </dt>
+        <dd>Control parameters for <code><a href="../reference/fit_ofe.html">fit_ofe()</a></code></dd>
+
+        <dt>
+
+          <code><a href="summary.ofe_fit.html">summary(<i>&lt;ofe_fit&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarise a fitted <code>ofe_fit</code></dd>
+
+        <dt>
+
+          <code><a href="wald_tests.html">wald_tests()</a></code>
+
+        </dt>
+        <dd>Wald tests of the fixed-effect terms</dd>
+
+        <dt>
+
+          <code><a href="ofe_means.html">ofe_means()</a></code>
+
+        </dt>
+        <dd>Predicted means for a fixed term</dd>
+      </dl></div><div class="section level2">
+      <h2 id="finding-pseudo-environments">Finding pseudo-environments<a class="anchor" aria-label="anchor" href="#finding-pseudo-environments"></a></h2>
+
+      <div class="section-desc"><p>Cutting the trial into zones the spatial covariance can actually support, and writing the residual structure that follows from them.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="partition_pseudo_env.html">partition_pseudo_env()</a></code>
+
+        </dt>
+        <dd>Derive pseudo-environments from the spatial pattern of the dense layer</dd>
+
+        <dt>
+
+          <code><a href="adaptive_residual.html">adaptive_residual()</a></code>
+
+        </dt>
+        <dd>Build a residual structure that matches the realised geometry</dd>
+      </dl></div><div class="section level2">
       <h2 id="estimating-the-treatment-effect">Estimating the treatment effect<a class="anchor" aria-label="anchor" href="#estimating-the-treatment-effect"></a></h2>
 
       <div class="section-desc"><p>The two integration strategies, the free baseline they are judged against, and a model-agnostic way to read the contrasts out.</p></div>
@@ -189,7 +256,7 @@
           <code><a href="ofeIntegrateR-package.html">ofeIntegrateR</a></code> <code><a href="ofeIntegrateR-package.html">ofeIntegrateR-package</a></code>
 
         </dt>
-        <dd>ofeIntegrateR: Integrate Point-Source and High-Resolution Spatial Data in On-Farm Experiments</dd>
+        <dd>ofeIntegrateR: Design, Sample and Analyse On-Farm Strip Experiments</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

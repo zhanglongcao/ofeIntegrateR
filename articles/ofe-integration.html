@@ -216,15 +216,15 @@ the honest comparator for anything that does.
 <code><a href="../reference/compare_integration.html">compare_integration()</a></code> fits both and lines them up.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_integration.html">compare_integration</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span>                           covariate <span class="op">=</span> <span class="st">"point_obs_kriged"</span>, engine <span class="op">=</span> <span class="st">"gls"</span><span class="op">)</span></span>
+<span>                           covariate <span class="op">=</span> <span class="st">"point_obs_kriged"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">cmp</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"treat"</span>, <span class="va">cmp</span><span class="op">$</span><span class="va">term</span><span class="op">)</span>, <span class="op">]</span></span>
 <span><span class="co">#&gt;     term baseline_estimate baseline_se integrated_estimate integrated_se</span></span>
-<span><span class="co">#&gt; 2 treatB         0.6639032  0.08448540            0.699747    0.07885479</span></span>
-<span><span class="co">#&gt; 3 treatC         1.3666055  0.09707601            1.407805    0.08832748</span></span>
-<span><span class="co">#&gt;   estimate_change    se_change</span></span>
-<span><span class="co">#&gt; 2      0.03584379 -0.005630609</span></span>
-<span><span class="co">#&gt; 3      0.04119903 -0.008748533</span></span></code></pre></div>
+<span><span class="co">#&gt; 2 treatB         0.6142651   0.1018629            0.676549    0.08377874</span></span>
+<span><span class="co">#&gt; 3 treatC         1.3400755   0.1123979            1.391838    0.09039698</span></span>
+<span><span class="co">#&gt;   estimate_change   se_change</span></span>
+<span><span class="co">#&gt; 2      0.06228387 -0.01808416</span></span>
+<span><span class="co">#&gt; 3      0.05176207 -0.02200091</span></span></code></pre></div>
 <p>Compare <code>baseline_estimate</code> and
 <code>integrated_estimate</code> against the truth of 1.6, and look at
 <code>se_change</code> — negative means the integrated fit is more
@@ -244,43 +244,184 @@ them is exactly what the sampling bought.</p>
 <p>Pass several kriged surfaces and they all enter the model:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/fit_integrated_kriged.html">fit_integrated_kriged</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span>                      covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soil_n_kriged"</span>, <span class="st">"soil_p_kriged"</span><span class="op">)</span>,</span>
-<span>                      engine <span class="op">=</span> <span class="st">"gls"</span><span class="op">)</span></span></code></pre></div>
+<span>                      covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soil_n_kriged"</span>, <span class="st">"soil_p_kriged"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="choosing-an-engine">Choosing an engine<a class="anchor" aria-label="anchor" href="#choosing-an-engine"></a>
 </h2>
 <table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
 <thead><tr class="header">
 <th><code>engine</code></th>
 <th>Spatial residual</th>
+<th>Random effects</th>
 <th>Licence</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
+<td>
+<code>"ofe"</code> (default)</td>
+<td>
+<code>ar1(row):ar1(col)</code>, via <code><a href="../reference/fit_ofe.html">fit_ofe()</a></code>
+</td>
+<td>yes</td>
+<td>open source</td>
+</tr>
+<tr class="even">
 <td><code>"asreml"</code></td>
 <td><code>ar1(row):ar1(col)</code></td>
+<td>yes</td>
 <td>commercial</td>
+</tr>
+<tr class="odd">
+<td><code>"lme"</code></td>
+<td>exponential, via <code><a href="https://rdrr.io/pkg/nlme/man/lme.html" class="external-link">nlme::lme()</a></code>
+</td>
+<td>yes</td>
+<td>open source</td>
 </tr>
 <tr class="even">
 <td><code>"gls"</code></td>
 <td>exponential, via <code><a href="https://rdrr.io/pkg/nlme/man/gls.html" class="external-link">nlme::gls()</a></code>
 </td>
+<td>no</td>
 <td>open source</td>
 </tr>
 <tr class="odd">
 <td><code>"lm"</code></td>
 <td>none</td>
+<td>no</td>
 <td>open source</td>
 </tr>
 </tbody>
 </table>
-<p><code>"gls"</code> is the open-source workhorse. <code>"lm"</code>
-ignores spatial correlation entirely and is best kept as a diagnostic
-reference rather than a final model.
-<code><a href="../reference/extract_fixed_effects.html">extract_fixed_effects()</a></code> returns the same tidy table
-whichever engine fitted the model, so downstream code does not change
-when a licence appears or disappears.</p>
+<p><code>"ofe"</code> is the default: it fits the same separable AR1
+model asreml does, in base R. <code>"lm"</code> ignores spatial
+correlation entirely and is best kept as a diagnostic reference rather
+than a final model. <code><a href="../reference/extract_fixed_effects.html">extract_fixed_effects()</a></code> returns the
+same tidy table whichever engine fitted the model, so downstream code
+does not change when a licence appears or disappears.</p>
+</div>
+<div class="section level2">
+<h2 id="step-4-fit-the-model-yourself">Step 4 — fit the model yourself<a class="anchor" aria-label="anchor" href="#step-4-fit-the-model-yourself"></a>
+</h2>
+<p><code><a href="../reference/fit_integrated_kriged.html">fit_integrated_kriged()</a></code> is a convenience wrapper. When
+you want a residual structure of your own, call <code><a href="../reference/fit_ofe.html">fit_ofe()</a></code>
+directly; it takes the asreml spellings, so the formula below is the one
+you would write for <code>asreml::asreml()</code>.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">treat</span> <span class="op">+</span> <span class="va">point_obs_kriged</span>, data <span class="op">=</span> <span class="va">kr</span>,</span>
+<span>               residual <span class="op">=</span> <span class="op">~</span> <span class="fu">ar1</span><span class="op">(</span><span class="va">row</span><span class="op">)</span><span class="op">:</span><span class="fu">ar1</span><span class="op">(</span><span class="va">col</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Spatial mixed model fitted by REML (ofeIntegrateR)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Fixed:     yield ~ treat + point_obs_kriged </span></span>
+<span><span class="co">#&gt; Residual:  ~ar1(row):ar1(col) </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Observations: 318  Fixed parameters: 4  REML logLik: -151.128 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Variance parameters:</span></span>
+<span><span class="co">#&gt;           estimate std.error variance</span></span>
+<span><span class="co">#&gt; R!row!cor   0.4323   0.05410       NA</span></span>
+<span><span class="co">#&gt; R!col!cor   0.3737   0.05527       NA</span></span>
+<span><span class="co">#&gt; sigma2      0.2054   0.01639   0.2054</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Fixed effects:</span></span>
+<span><span class="co">#&gt;                  estimate std.error      t      p</span></span>
+<span><span class="co">#&gt; (Intercept)       0.05705   0.07507  0.760  0.448</span></span>
+<span><span class="co">#&gt; treatB            0.67655   0.08378  8.075 &lt;1e-04</span></span>
+<span><span class="co">#&gt; treatC            1.39184   0.09040 15.397 &lt;1e-04</span></span>
+<span><span class="co">#&gt; point_obs_kriged  0.71165   0.08835  8.055 &lt;1e-04</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 6 row(s) dropped for missing values.</span></span></code></pre></div>
+<p><code><a href="../reference/wald_tests.html">wald_tests()</a></code> tests each fixed term as a whole — the
+question a trial report asks — rather than one coefficient at a
+time:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
+<span><span class="co">#&gt;               term df      wald         F      p.value</span></span>
+<span><span class="co">#&gt; 1            treat  2 237.09564 118.54782 4.418959e-39</span></span>
+<span><span class="co">#&gt; 2 point_obs_kriged  1  64.88742  64.88742 1.666269e-14</span></span></code></pre></div>
+<p>and <code><a href="../reference/ofe_means.html">ofe_means()</a></code> gives the treatment means, or the
+contrasts between them with the standard error of difference:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   treat estimate  std.error        lower     upper</span></span>
+<span><span class="co">#&gt; 1     A 0.135865 0.07374326 -0.009228365 0.2809584</span></span>
+<span><span class="co">#&gt; 2     B 0.812414 0.07388445  0.667042833 0.9577852</span></span>
+<span><span class="co">#&gt; 3     C 1.527703 0.07506330  1.380012017 1.6753932</span></span>
+<span><span class="fu"><a href="../reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   contrast  estimate  std.error statistic      p.value</span></span>
+<span><span class="co">#&gt; 1    B - A 0.6765490 0.08377874  8.075425 1.453454e-14</span></span>
+<span><span class="co">#&gt; 2    C - A 1.3918376 0.09039698 15.396948 3.044251e-40</span></span>
+<span><span class="co">#&gt; 3    C - B 0.7152886 0.08428020  8.487031 8.519006e-16</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="step-5-pseudo-environments">Step 5 — pseudo-environments<a class="anchor" aria-label="anchor" href="#step-5-pseudo-environments"></a>
+</h2>
+<p>A strip runs the length of the paddock, and the treatment effect at
+one end need not be the effect at the other.
+<code><a href="../reference/partition_pseudo_env.html">partition_pseudo_env()</a></code> finds the zones from the data: it
+removes the treatment signal, collapses what is left to a profile along
+the trial, and segments that profile by dynamic programming.</p>
+<p>The guard against inventing zones is the spatial covariance. A smooth
+field always looks like it has regions; what matters is whether a region
+is wider than the correlation range, because anything narrower is one
+realisation of the same correlated surface. The practical range of a
+fitted exponential variogram therefore sets the minimum zone width, and
+caps how many zones are on offer.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/partition_pseudo_env.html">partition_pseudo_env</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, along <span class="op">=</span> <span class="st">"row"</span>,</span>
+<span>                          treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>range <span class="op">=</span> <span class="va">p</span><span class="op">$</span><span class="va">range</span>, min_width <span class="op">=</span> <span class="va">p</span><span class="op">$</span><span class="va">min_zone_width</span>,</span>
+<span>  most_zones_possible <span class="op">=</span> <span class="va">p</span><span class="op">$</span><span class="va">max_zones_possible</span>, chosen <span class="op">=</span> <span class="va">p</span><span class="op">$</span><span class="va">n_zones</span><span class="op">)</span></span>
+<span><span class="co">#&gt;               range           min_width most_zones_possible              chosen </span></span>
+<span><span class="co">#&gt;            3.959022            3.959022            3.000000            1.000000</span></span>
+<span><span class="va">p</span><span class="op">$</span><span class="va">zones</span></span>
+<span><span class="co">#&gt;   zone start  end width   n</span></span>
+<span><span class="co">#&gt; 1    1   0.5 12.5    12 324</span></span></code></pre></div>
+<p>On this trial it returns a single zone, which is the right answer:
+nothing zone-like was simulated. The trial is only twelve rows deep and
+the fitted range is about four, so at most three zones were ever on
+offer, and BIC preferred none of them. A function that always found
+zones would be worse than useless.</p>
+<p><code><a href="../reference/adaptive_residual.html">adaptive_residual()</a></code> then writes the residual structure
+those zones imply. It gives a zone <code>ar1()</code> only in the
+dimensions where it has extent: a zone one row deep would otherwise ask
+for an unidentifiable parameter and fail.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/adaptive_residual.html">adaptive_residual</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span></span>
+<span><span class="va">r</span></span>
+<span><span class="co">#&gt; ~dsum(~ar1(row):ar1(col) | zone, levels = c("1"))</span></span>
+<span><span class="co">#&gt; attr(,"geometry")</span></span>
+<span><span class="co">#&gt;   zone   n n_row n_col            struct</span></span>
+<span><span class="co">#&gt; 1    1 324    12    27 ar1(row):ar1(col)</span></span>
+<span><span class="co">#&gt; attr(,"n_degenerate")</span></span>
+<span><span class="co">#&gt; [1] 0</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">r</span>, <span class="st">"geometry"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   zone   n n_row n_col            struct</span></span>
+<span><span class="co">#&gt; 1    1 324    12    27 ar1(row):ar1(col)</span></span></code></pre></div>
+<p>If more than one zone was found, fitting a zone-specific treatment
+effect is one call:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nlevels.html" class="external-link">nlevels</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">zone</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">fit_z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">zone</span> <span class="op">+</span> <span class="va">zone</span><span class="op">:</span><span class="va">treat</span>, data <span class="op">=</span> <span class="va">z</span>, residual <span class="op">=</span> <span class="va">r</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit_z</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>Two cautions. Zones found this way are a description of where the
+paddock differs, not proof of a boundary — a smooth field with no step
+in it is still split more often than not. And because the cuts were
+placed where the residuals already differed, a zone-by-treatment
+interaction estimated on self-derived zones is exploratory: use the
+zones freely for the residual structure, and confirm an interaction
+against an independent layer (elevation, EM38, last season’s yield) by
+passing that layer as <code>response</code> instead.</p>
 </div>
 <div class="section level2">
 <h2 id="when-integration-is-not-worth-it">When integration is not worth it<a class="anchor" aria-label="anchor" href="#when-integration-is-not-worth-it"></a>

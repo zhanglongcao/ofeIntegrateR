@@ -6,6 +6,67 @@ First release.
 
 ### New features
 
+- [`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md)
+  fits a linear mixed model by residual maximum likelihood with a
+  separable, ASReml-style residual structure, written in base R. It
+  exists because the analysis was the one step of the pipeline that
+  still needed a commercial licence: the model at the end of an OFE
+  workflow is `yield ~ treat` with an `ar1(row):ar1(col)` residual, and
+  until now that meant asreml or an approximation. `residual` takes the
+  asreml spellings – `id()`, `ar1()`,
+  [`exp()`](https://rdrr.io/r/base/Log.html),
+  [`diag()`](https://rdrr.io/r/base/diag.html), and
+  `dsum(~ struct | s, levels = )` sections – combined with `:`, so a
+  script written against asreml runs unchanged. On the structures both
+  support the two agree to several significant figures, on variance
+  components, fixed effects and their standard errors alike.
+  [`wald_tests()`](https://www.zcao.space/ofeIntegrateR/reference/wald_tests.md)
+  and
+  [`ofe_means()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_means.md)
+  are the analogues of `wald.asreml()` and `predict.asreml()`, the
+  latter also returning pairwise contrasts with their standard errors of
+  difference.
+
+  Unlike asreml, cells with a missing response are dropped rather than
+  padded: the correlation is evaluated from the positions of the
+  observations that remain, and a row absent from the data still
+  contributes its lag instead of being closed up. The engine is dense –
+  it factorises an n-by-n matrix at every iteration – so it is meant for
+  OFE-sized problems, and refuses more than `ofe_control(max_n = )`
+  observations rather than appearing to hang.
+
+- [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+  derives pseudo-environments from the dense layer instead of taking
+  them as given. It removes the treatment signal, collapses the residual
+  field to a profile along the trial, and segments that profile
+  optimally by dynamic programming. The spatial covariance is what stops
+  it inventing zones: the practical range of a fitted exponential
+  variogram becomes the minimum zone width and caps the number of zones
+  at `floor(trial length / range)`, because a region narrower than the
+  correlation range is one realisation of the same surface rather than a
+  distinct environment. Within that cap, BIC chooses. The derivation is
+  returned in full – the fitted range, the breaks, the BIC table and the
+  profile – so the answer can be argued with rather than merely
+  accepted.
+
+- [`adaptive_residual()`](https://www.zcao.space/ofeIntegrateR/reference/adaptive_residual.md)
+  writes the `dsum()` residual formula a set of zones implies, giving
+  each zone `ar1()` only in the dimensions where it has extent and
+  `id()` elsewhere. Without this, a zone one row deep asks for an
+  unidentifiable AR1 parameter and the fit fails. The formula is plain
+  text that both
+  [`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md)
+  and `asreml::asreml()` accept.
+
+- [`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md)
+  and
+  [`compare_integration()`](https://www.zcao.space/ofeIntegrateR/reference/compare_integration.md)
+  now default to `engine = "ofe"`, so the documented workflow fits the
+  AR1xAR1 model with no licence. `engine = "asreml"` still fits the
+  identical model where licensed, and
+  [`extract_fixed_effects()`](https://www.zcao.space/ofeIntegrateR/reference/extract_fixed_effects.md)
+  reads contrasts out of either.
+
 - [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md)
   chooses where to put point samples under a named design — random,
   systematic grid, stratified or nested. The package Description

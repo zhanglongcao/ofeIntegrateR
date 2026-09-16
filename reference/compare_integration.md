@@ -14,7 +14,7 @@ compare_integration(
   covariate,
   row = "row",
   col = "col",
-  engine = c("asreml", "gls", "lm"),
+  engine = c("ofe", "asreml", "gls", "lm"),
   ...
 )
 ```
@@ -44,6 +44,7 @@ compare_integration(
 
   Fitting engine, passed to
   [`fit_integrated_kriged()`](https://www.zcao.space/ofeIntegrateR/reference/fit_integrated_kriged.md).
+  Defaults to `"ofe"`, which needs no licence.
 
 - ...:
 
