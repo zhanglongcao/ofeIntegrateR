@@ -293,10 +293,50 @@ ofe_means(fit, "treat")
 #> 2     B 0.812414 0.07388445  0.667042833 0.9577852
 #> 3     C 1.527703 0.07506330  1.380012017 1.6753932
 ofe_means(fit, "treat", pairwise = TRUE)
-#>   contrast  estimate  std.error statistic      p.value
-#> 1    B - A 0.6765490 0.08377874  8.075425 1.453454e-14
-#> 2    C - A 1.3918376 0.09039698 15.396948 3.044251e-40
-#> 3    C - B 0.7152886 0.08428020  8.487031 8.519006e-16
+#>   level1 level2 contrast  estimate  std.error statistic      p.value
+#> 1      A      B    B - A 0.6765490 0.08377874  8.075425 1.453454e-14
+#> 2      A      C    C - A 1.3918376 0.09039698 15.396948 3.044251e-40
+#> 3      B      C    C - B 0.7152886 0.08428020  8.487031 8.519006e-16
+```
+
+[`ofe_lsd()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_lsd.md)
+puts those together into the table a report prints: means sorted
+best-first, with the a/b/c letters. Levels sharing a letter are not
+separable at `alpha`.
+
+``` r
+
+tab <- ofe_lsd(fit, "treat")
+tab
+#>   treat estimate  std.error        lower     upper group
+#> 1     C 1.527703 0.07506330  1.380012017 1.6753932     a
+#> 2     B 0.812414 0.07388445  0.667042833 0.9577852     b
+#> 3     A 0.135865 0.07374326 -0.009228365 0.2809584     c
+attr(tab, "lsd")
+#>   average_sed       lsd  df alpha adjust      use
+#> 1  0.08615197 0.1695081 314  0.05   none pairwise
+```
+
+On a balanced design this reproduces `agricolae::LSD.test()` exactly,
+and `adjust = "tukey"` reproduces `agricolae::HSD.test()`. The default
+here differs from both in one respect that matters for a spatial model:
+each pair is judged on its own standard error of difference, because
+neighbouring strips are compared more precisely than distant ones. Pass
+`use = "lsd"` for the single average LSD a published table usually
+means, and quote the value from `attr(tab, "lsd")` with it.
+
+The default `adjust = "none"` gives unprotected comparisons — the
+convention these letters usually carry, and not a family-wise error
+rate. With more than three or four treatments, say so in the caption or
+adjust:
+
+``` r
+
+ofe_lsd(fit, "treat", adjust = "tukey")
+#>   treat estimate  std.error        lower     upper group
+#> 1     C 1.527703 0.07506330  1.380012017 1.6753932     a
+#> 2     B 0.812414 0.07388445  0.667042833 0.9577852     b
+#> 3     A 0.135865 0.07374326 -0.009228365 0.2809584     c
 ```
 
 ## Step 5 — pseudo-environments
@@ -362,7 +402,10 @@ effect is one call:
 
 if (nlevels(z$zone) > 1) {
   fit_z <- fit_ofe(yield ~ zone + zone:treat, data = z, residual = r)
-  wald_tests(fit_z)
+  print(wald_tests(fit_z))
+  # One lettering per zone: comparisons never cross a zone boundary, and
+  # each zone gets its own LSD.
+  print(ofe_lsd(fit_z, "treat", by = "zone"))
 }
 ```
 

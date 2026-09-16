@@ -42,6 +42,15 @@ are the analogues of `wald.asreml()` and `predict.asreml()`. On the
 structures both support it agrees with `asreml::asreml()` to several
 significant figures.
 
+## Report the means
+
+[`ofe_lsd()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_lsd.md)
+gives the predicted means with their least significant difference and
+the a/b/c letters, matching `agricolae::LSD.test()` and `HSD.test()` on
+a balanced design.
+[`compact_letters()`](https://www.zcao.space/ofeIntegrateR/reference/compact_letters.md)
+letters pairwise comparisons from any other source.
+
 ## Pseudo-environments
 
 [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)

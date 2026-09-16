@@ -35,6 +35,36 @@ First release.
   OFE-sized problems, and refuses more than `ofe_control(max_n = )`
   observations rather than appearing to hang.
 
+- [`ofe_lsd()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_lsd.md)
+  reports the predicted means with their least significant difference
+  and a compact letter display – the a/b/c annotation a trial report
+  prints beside its treatment means. On a balanced design it reproduces
+  `agricolae::LSD.test()` exactly, LSD value and letters alike, and
+  `adjust = "tukey"` reproduces `agricolae::HSD.test()`. Its default
+  differs from both on the data this package is for: each pair is judged
+  on its own standard error of difference, because under a spatial model
+  neighbouring strips are compared more precisely than distant ones, and
+  a single average LSD hides that. `use = "lsd"` gives the classic
+  single LSD for a published table, and the value is returned alongside
+  so it can be quoted. `by = "zone"` letters the means within each
+  pseudo-environment, with comparisons and LSDs kept inside a zone.
+
+- [`compact_letters()`](https://www.zcao.space/ofeIntegrateR/reference/compact_letters.md)
+  turns any set of pairwise comparisons into letters, so output from
+  `asreml::predict()`, `emmeans` or a hand-typed table can be annotated
+  the same way. It takes a p-value matrix, a `contrast` column of the
+  form `"B - A"`, or explicit `level1`/`level2` columns. Letters come
+  from the maximal cliques of the not-different graph, which is the
+  minimal correct display; a pair with no p-value raises a warning
+  rather than passing silently as “different”.
+
+- [`ofe_means()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_means.md)
+  gains `by`, for means within each level of a second factor, and
+  `adjust`, for multiplicity-adjusted pairwise p-values (`"tukey"`,
+  `"sidak"`, or any \[stats::p.adjust()\] method). Its pairwise table
+  now names the two levels of each comparison in `level1` and `level2`
+  as well as in `contrast`.
+
 - [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
   derives pseudo-environments from the dense layer instead of taking
   them as given. It removes the treatment signal, collapses the residual

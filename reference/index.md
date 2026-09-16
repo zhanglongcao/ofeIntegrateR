@@ -58,6 +58,16 @@ plus the tests and predicted means that go with it.
 - [`ofe_means()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_means.md)
   : Predicted means for a fixed term
 
+## Reporting the means
+
+Predicted means with least significant differences and the a/b/c letters
+a trial report prints beside them.
+
+- [`ofe_lsd()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_lsd.md)
+  : Predicted means with LSD letters
+- [`compact_letters()`](https://www.zcao.space/ofeIntegrateR/reference/compact_letters.md)
+  : Compact letter display from any set of pairwise comparisons
+
 ## Finding pseudo-environments
 
 Cutting the trial into zones the spatial covariance can actually

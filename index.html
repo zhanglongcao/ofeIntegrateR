@@ -119,6 +119,10 @@
 </td>
 </tr>
 <tr>
+<td>Report the means with an LSD and a/b/c letters</td>
+<td><code><a href="reference/ofe_lsd.html">ofe_lsd()</a></code></td>
+</tr>
+<tr>
 <td>Fit the baseline and the integrated model, and compare</td>
 <td><code><a href="reference/compare_integration.html">compare_integration()</a></code></td>
 </tr>
@@ -157,6 +161,20 @@
 <span><span class="fu"><a href="reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                   <span class="co"># like wald.asreml(): one test per term</span></span>
 <span><span class="fu"><a href="reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span>           <span class="co"># like predict.asreml(): treatment means</span></span>
 <span><span class="fu"><a href="reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>   <span class="co"># contrasts with their SEDs</span></span></code></pre></div>
+<p>For the table that actually goes in the report — means, LSD, and the letters next to them — <code><a href="reference/ofe_lsd.html">ofe_lsd()</a></code>:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span>            <span class="co"># means sorted best-first, with a/b/c</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">tab</span>, <span class="st">"lsd"</span><span class="op">)</span>                        <span class="co"># average SED, LSD, df, settings</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">tab</span>, <span class="st">"comparisons"</span><span class="op">)</span>                <span class="co"># every pairwise test behind the letters</span></span></code></pre></div>
+<pre><code>  treat estimate std.error  lower  upper group
+1     F   14.820     0.375 14.063 15.577     a
+2     E   12.769     0.375 12.011 13.526     b
+3     D   11.854     0.375 11.096 12.611    bc
+4     C   11.511     0.375 10.754 12.268     c
+5     B   10.294     0.375  9.536 11.051     d
+6     A    9.674     0.375  8.917 10.432     d</code></pre>
+<p>On a balanced design this reproduces <code>agricolae::LSD.test()</code> exactly — the same LSD value and the same letters — and <code>adjust = "tukey"</code> reproduces <code>agricolae::HSD.test()</code>. Where it differs is on the data this package is for: by default each pair is judged on <strong>its own</strong> standard error of difference, because in a spatial model neighbouring strips really are compared more precisely than distant ones. Pass <code>use = "lsd"</code> for the single average LSD a published table usually means.</p>
+<p><code>by = "zone"</code> letters the means within each pseudo-environment separately — comparisons never cross a zone, and each zone gets its own LSD. And <code><a href="reference/compact_letters.html">compact_letters()</a></code> will letter a pairwise table from anywhere else (<code>asreml::predict()</code>, <code>emmeans</code>, a table typed by hand), so the same annotation can be put on a fit this package did not produce.</p>
 <p>The <code>residual</code> argument takes the asreml spellings, combined with <code>:</code> for a separable structure:</p>
 <table class="table">
 <colgroup>
@@ -202,7 +220,7 @@
 </h2>
 <p>Strip trials are long, and a treatment effect at one end of the paddock need not be the effect at the other. <code><a href="reference/partition_pseudo_env.html">partition_pseudo_env()</a></code> cuts the trial into contiguous zones from the data: it removes the treatment signal, collapses the residual field to a profile along the trial, and segments that profile optimally by dynamic programming.</p>
 <p>What stops it inventing zones is the spatial covariance. Any smooth field looks like it has regions; the question is whether a region is wider than the correlation range, because anything narrower is one realisation of the same correlated surface rather than a distinct environment. So the practical range of a fitted exponential variogram becomes the minimum zone width, and caps the number of zones at <code>floor(trial length / range)</code>. Within that cap, BIC chooses.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/partition_pseudo_env.html">partition_pseudo_env</a></span><span class="op">(</span><span class="va">g</span>, response <span class="op">=</span> <span class="st">"yield"</span>, along <span class="op">=</span> <span class="st">"row"</span>, treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">range</span>      <span class="co"># what set the minimum zone width</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">zones</span>      <span class="co"># where the cuts fell, and how big each zone is</span></span>
@@ -282,7 +300,7 @@
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># The same call on any engine</span></span>
 <span><span class="fu"><a href="reference/fit_integrated_kriged.html">fit_integrated_kriged</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
 <span>                      covariate <span class="op">=</span> <span class="st">"soil_n_kriged"</span>, random <span class="op">=</span> <span class="op">~</span> <span class="va">rep</span><span class="op">)</span></span></code></pre></div>
@@ -300,7 +318,7 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"zhanglongcao/ofeIntegrateR"</span><span class="op">)</span></span></code></pre></div>
 <p>Documentation: <a href="https://www.zcao.space/ofeIntegrateR/" class="uri">https://www.zcao.space/ofeIntegrateR/</a></p>
@@ -309,7 +327,7 @@
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zhanglongcao/ofeIntegrateR" class="external-link">ofeIntegrateR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># A trial as a yield monitor actually records it: points along passes,</span></span>

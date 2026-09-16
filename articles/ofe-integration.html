@@ -356,10 +356,42 @@ contrasts between them with the standard error of difference:</p>
 <span><span class="co">#&gt; 2     B 0.812414 0.07388445  0.667042833 0.9577852</span></span>
 <span><span class="co">#&gt; 3     C 1.527703 0.07506330  1.380012017 1.6753932</span></span>
 <span><span class="fu"><a href="../reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   contrast  estimate  std.error statistic      p.value</span></span>
-<span><span class="co">#&gt; 1    B - A 0.6765490 0.08377874  8.075425 1.453454e-14</span></span>
-<span><span class="co">#&gt; 2    C - A 1.3918376 0.09039698 15.396948 3.044251e-40</span></span>
-<span><span class="co">#&gt; 3    C - B 0.7152886 0.08428020  8.487031 8.519006e-16</span></span></code></pre></div>
+<span><span class="co">#&gt;   level1 level2 contrast  estimate  std.error statistic      p.value</span></span>
+<span><span class="co">#&gt; 1      A      B    B - A 0.6765490 0.08377874  8.075425 1.453454e-14</span></span>
+<span><span class="co">#&gt; 2      A      C    C - A 1.3918376 0.09039698 15.396948 3.044251e-40</span></span>
+<span><span class="co">#&gt; 3      B      C    C - B 0.7152886 0.08428020  8.487031 8.519006e-16</span></span></code></pre></div>
+<p><code><a href="../reference/ofe_lsd.html">ofe_lsd()</a></code> puts those together into the table a report
+prints: means sorted best-first, with the a/b/c letters. Levels sharing
+a letter are not separable at <code>alpha</code>.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span></span>
+<span><span class="va">tab</span></span>
+<span><span class="co">#&gt;   treat estimate  std.error        lower     upper group</span></span>
+<span><span class="co">#&gt; 1     C 1.527703 0.07506330  1.380012017 1.6753932     a</span></span>
+<span><span class="co">#&gt; 2     B 0.812414 0.07388445  0.667042833 0.9577852     b</span></span>
+<span><span class="co">#&gt; 3     A 0.135865 0.07374326 -0.009228365 0.2809584     c</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">tab</span>, <span class="st">"lsd"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   average_sed       lsd  df alpha adjust      use</span></span>
+<span><span class="co">#&gt; 1  0.08615197 0.1695081 314  0.05   none pairwise</span></span></code></pre></div>
+<p>On a balanced design this reproduces
+<code>agricolae::LSD.test()</code> exactly, and
+<code>adjust = "tukey"</code> reproduces
+<code>agricolae::HSD.test()</code>. The default here differs from both
+in one respect that matters for a spatial model: each pair is judged on
+its own standard error of difference, because neighbouring strips are
+compared more precisely than distant ones. Pass <code>use = "lsd"</code>
+for the single average LSD a published table usually means, and quote
+the value from <code>attr(tab, "lsd")</code> with it.</p>
+<p>The default <code>adjust = "none"</code> gives unprotected
+comparisons — the convention these letters usually carry, and not a
+family-wise error rate. With more than three or four treatments, say so
+in the caption or adjust:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, adjust <span class="op">=</span> <span class="st">"tukey"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   treat estimate  std.error        lower     upper group</span></span>
+<span><span class="co">#&gt; 1     C 1.527703 0.07506330  1.380012017 1.6753932     a</span></span>
+<span><span class="co">#&gt; 2     B 0.812414 0.07388445  0.667042833 0.9577852     b</span></span>
+<span><span class="co">#&gt; 3     A 0.135865 0.07374326 -0.009228365 0.2809584     c</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-5-pseudo-environments">Step 5 — pseudo-environments<a class="anchor" aria-label="anchor" href="#step-5-pseudo-environments"></a>
@@ -375,7 +407,7 @@ is wider than the correlation range, because anything narrower is one
 realisation of the same correlated surface. The practical range of a
 fitted exponential variogram therefore sets the minimum zone width, and
 caps how many zones are on offer.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/partition_pseudo_env.html">partition_pseudo_env</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, along <span class="op">=</span> <span class="st">"row"</span>,</span>
 <span>                          treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span></span>
@@ -395,7 +427,7 @@ zones would be worse than useless.</p>
 those zones imply. It gives a zone <code>ar1()</code> only in the
 dimensions where it has extent: a zone one row deep would otherwise ask
 for an unidentifiable parameter and fail.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/adaptive_residual.html">adaptive_residual</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span></span>
 <span><span class="va">r</span></span>
 <span><span class="co">#&gt; ~dsum(~ar1(row):ar1(col) | zone, levels = c("1"))</span></span>
@@ -409,10 +441,13 @@ for an unidentifiable parameter and fail.</p>
 <span><span class="co">#&gt; 1    1 324    12    27 ar1(row):ar1(col)</span></span></code></pre></div>
 <p>If more than one zone was found, fitting a zone-specific treatment
 effect is one call:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nlevels.html" class="external-link">nlevels</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">zone</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">fit_z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">zone</span> <span class="op">+</span> <span class="va">zone</span><span class="op">:</span><span class="va">treat</span>, data <span class="op">=</span> <span class="va">z</span>, residual <span class="op">=</span> <span class="va">r</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="../reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit_z</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit_z</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="co"># One lettering per zone: comparisons never cross a zone boundary, and</span></span>
+<span>  <span class="co"># each zone gets its own LSD.</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit_z</span>, <span class="st">"treat"</span>, by <span class="op">=</span> <span class="st">"zone"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <p>Two cautions. Zones found this way are a description of where the
 paddock differs, not proof of a boundary — a smooth field with no step

@@ -56,7 +56,14 @@ error of the contrast – which is the number a trial report quotes.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ofe_means</span><span class="op">(</span><span class="va">object</span>, <span class="va">term</span>, pairwise <span class="op">=</span> <span class="cn">FALSE</span>, level <span class="op">=</span> <span class="fl">0.95</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ofe_means</span><span class="op">(</span></span>
+<span>  <span class="va">object</span>,</span>
+<span>  <span class="va">term</span>,</span>
+<span>  by <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pairwise <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  adjust <span class="op">=</span> <span class="st">"none"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -71,6 +78,14 @@ error of the contrast – which is the number a trial report quotes.</p>
 <dd><p>Character; the name of a factor in the fixed model.</p></dd>
 
 
+<dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
+<dd><p>Character or <code>NULL</code>; a second factor to compute the means within,
+one set per level of it. Use this for a pseudo-environment analysis –
+<code>ofe_means(fit, "treat", by = "zone")</code> gives the treatment means of each
+zone. Means are averaged over the rows belonging to that level only, and
+comparisons are made within a level, never across.</p></dd>
+
+
 <dt id="arg-pairwise">pairwise<a class="anchor" aria-label="anchor" href="#arg-pairwise"></a></dt>
 <dd><p>Logical; return all pairwise differences rather than the
 means themselves.</p></dd>
@@ -79,12 +94,25 @@ means themselves.</p></dd>
 <dt id="arg-level">level<a class="anchor" aria-label="anchor" href="#arg-level"></a></dt>
 <dd><p>Numeric; confidence level for the interval (default 0.95).</p></dd>
 
+
+<dt id="arg-adjust">adjust<a class="anchor" aria-label="anchor" href="#arg-adjust"></a></dt>
+<dd><p>Multiplicity adjustment applied to the pairwise p-values:
+<code>"none"</code> (the default, i.e. unprotected LSD comparisons), <code>"tukey"</code>,
+<code>"sidak"</code>, or any method taken by <code><a href="https://rdrr.io/r/stats/p.adjust.html" class="external-link">stats::p.adjust()</a></code>. Ignored when
+<code>pairwise = FALSE</code>. With <code>by</code>, the adjustment counts the comparisons
+within a level, not across all of them.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A data frame of predicted means (<code>term</code> level, <code>estimate</code>,
-<code>std.error</code>, <code>lower</code>, <code>upper</code>) or, when <code>pairwise = TRUE</code>, of differences
-(<code>contrast</code>, <code>estimate</code>, <code>std.error</code>, <code>statistic</code>, <code>p.value</code>).</p>
+    <p>A data frame of predicted means (the <code>by</code> level where given, the
+<code>term</code> level, <code>estimate</code>, <code>std.error</code>, <code>lower</code>, <code>upper</code>) or, when
+<code>pairwise = TRUE</code>, of differences (<code>level1</code>, <code>level2</code>, <code>contrast</code>,
+<code>estimate</code>, <code>std.error</code>, <code>statistic</code>, <code>p.value</code>).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="ofe_lsd.html">ofe_lsd()</a></code>, which adds the a/b/c letters to the means.</p></div>
     </div>
 
     <div class="section level2">
@@ -97,10 +125,15 @@ means themselves.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2     B 0.76998756 0.1014510  0.5692035 0.9707716</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3     C 1.49850465 0.1015156  1.2975927 1.6994166</span>
 <span class="r-in"><span><span class="fu">ofe_means</span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   contrast  estimate std.error statistic      p.value</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    B - A 0.6950687 0.1559570  4.456796 1.826948e-05</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2    C - A 1.4235858 0.1589796  8.954519 3.976049e-15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    C - B 0.7285171 0.1411766  5.160324 9.408498e-07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   level1 level2 contrast  estimate std.error statistic      p.value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      A      B    B - A 0.6950687 0.1559570  4.456796 1.826948e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2      A      C    C - A 1.4235858 0.1589796  8.954519 3.976049e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3      B      C    C - B 0.7285171 0.1411766  5.160324 9.408498e-07</span>
+<span class="r-in"><span><span class="fu">ofe_means</span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, pairwise <span class="op">=</span> <span class="cn">TRUE</span>, adjust <span class="op">=</span> <span class="st">"tukey"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   level1 level2 contrast  estimate std.error statistic      p.value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      A      B    B - A 0.6950687 0.1559570  4.456796 5.405269e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2      A      C    C - A 1.4235858 0.1589796  8.954519 2.575717e-14</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3      B      C    C - B 0.7285171 0.1411766  5.160324 2.805874e-06</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

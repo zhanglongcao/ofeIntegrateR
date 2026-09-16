@@ -58,7 +58,7 @@ r
 #> 2    2 240    20    12 ar1(row):ar1(col)
 #> attr(,"n_degenerate")
 #> [1] 0
-#> <environment: 0x55a1df114e58>
+#> <environment: 0x559e8ee20950>
 attr(r, "geometry")
 #>   zone   n n_row n_col            struct
 #> 1    1 240    20    12 ar1(row):ar1(col)
