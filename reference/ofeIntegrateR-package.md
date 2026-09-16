@@ -60,9 +60,10 @@ layer, using the fitted correlation range to stop the partition running
 past the scale the data can support; every treatment stays in every
 zone.
 [`partition_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/partition_paddock.md)
-clusters environmental covariates – elevation, EM38, soil tests – into
-contiguous regions of any shape, using a minimum spanning tree so that a
-zone cannot come back as scattered cells the way k-means leaves it.
+zones a paddock on environmental covariates – elevation, EM38, soil
+tests – into rectangular blocks by default, so the zones are something a
+machine can drive and a sampling grid can follow, with contiguous
+free-form zones available where the soil matters more than the shape.
 [`adaptive_residual()`](https://www.zcao.space/ofeIntegrateR/reference/adaptive_residual.md)
 writes the matching `dsum()` residual formula for either, demoting
 `ar1()` to `id()` in any zone that lacks the extent to support it.

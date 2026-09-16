@@ -61,7 +61,7 @@ zones are guaranteed to be spatially contiguous.</p>
 <span>  col <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  x <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  y <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"skater"</span>, <span class="st">"kmeans"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rectangle"</span>, <span class="st">"skater"</span>, <span class="st">"kmeans"</span><span class="op">)</span>,</span>
 <span>  neighbours <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"rook"</span>, <span class="st">"queen"</span>, <span class="st">"knn"</span><span class="op">)</span>,</span>
 <span>  n_neighbours <span class="op">=</span> <span class="fl">8L</span>,</span>
 <span>  k_max <span class="op">=</span> <span class="fl">8L</span>,</span>
@@ -85,9 +85,10 @@ zones are guaranteed to be spatially contiguous.</p>
 
 
 <dt id="arg-covariates">covariates<a class="anchor" aria-label="anchor" href="#arg-covariates"></a></dt>
-<dd><p>Character vector of the covariate columns to cluster on,
-such as <code>c("elevation", "ec_shallow", "clay")</code>. Rows missing any of them
-are dropped.</p></dd>
+<dd><p>Character vector naming the columns of <code>data</code> to zone on,
+such as <code>c("elevation", "clay")</code>. Required, and there is deliberately no
+default: which layers define a zone is an agronomic decision. All must be
+numeric; rows missing any of them are dropped.</p></dd>
 
 
 <dt id="arg-k">k<a class="anchor" aria-label="anchor" href="#arg-k"></a></dt>
@@ -107,8 +108,9 @@ spatial range and for <code>neighbours = "knn"</code>.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p><code>"skater"</code> (default, contiguous) or <code>"kmeans"</code>
-(not contiguous; for comparison).</p></dd>
+<dd><p><code>"rectangle"</code> (default) for rectangular blocks,
+<code>"skater"</code> for contiguous zones of any shape, or <code>"kmeans"</code> for
+unconstrained clustering (not contiguous; for comparison). See above.</p></dd>
 
 
 <dt id="arg-neighbours">neighbours<a class="anchor" aria-label="anchor" href="#arg-neighbours"></a></dt>
@@ -175,24 +177,59 @@ of each cell; cells dropped for missing covariates get <code>NA</code>. The
 derivation is attached as <code>attr(, "partition")</code>: the <code>method</code>, <code>k</code>,
 <code>covariates</code>, the fitted <code>range</code>, the <code>table</code> of criteria over k (<code>ssd</code>,
 <code>r2</code>, the marginal <code>gain</code>, and <code>ch</code>), and a <code>zones</code> summary with each
-zone's cell count, area, number of connected <code>patches</code>, covariate means
-and (with <code>treat</code>) treatment coverage.</p>
+zone's cell count, area, number of connected <code>patches</code>, corner
+coordinates, covariate means and (with <code>treat</code>) treatment coverage.</p>
     </div>
     <div class="section level2">
-    <h2 id="why-not-k-means">Why not k-means<a class="anchor" aria-label="anchor" href="#why-not-k-means"></a></h2>
-    <p>Clustering cells on their covariates alone assigns each cell to the zone its
-soil resembles, wherever the cell happens to sit, so zones come back as
-confetti scattered across the paddock. That is unusable: a machine cannot
-drive it, a sampling plan cannot stratify by it, and a strip trial cannot
-treat it as a pseudo-environment. <code>method = "skater"</code> (the default) instead
-builds a minimum spanning tree over the neighbourhood graph – edges weighted
-by distance between cells in standardised covariate space – and prunes it
-one edge at a time, always cutting the edge that removes most within-zone
-variance. Every zone is a subtree of a connected graph, so every zone is
-connected. The method is SKATER (Assuncao et al. 2006).</p>
-<p><code>method = "kmeans"</code> runs plain k-means for comparison. It is not contiguous,
-and the <code>patches</code> column of the zone summary shows how badly: a zone in one
-piece has <code>patches = 1</code>, and anything more is fragmentation.</p>
+    <h2 id="shape-of-the-zones">Shape of the zones<a class="anchor" aria-label="anchor" href="#shape-of-the-zones"></a></h2>
+    <p>Three methods, differing only in what shape a zone is allowed to be. The
+choice is a practical one, not a statistical one: a zone has to be something
+a machine can drive and a sampling plan can stratify by.</p>
+<dl><dt><code>"rectangle"</code> (default)</dt>
+<dd><p>Rectangular blocks. The paddock is cut
+repeatedly by lines running the full width or full length of the region
+being split, each cut placed where it removes most within-zone variance.
+Cutting a rectangle across always leaves two rectangles, so every zone is
+a rectangle however many cuts are made. This is the shape a variable-rate
+prescription, a soil sampling grid or a set of management blocks wants,
+and it is the two-dimensional version of what <code><a href="partition_pseudo_env.html">partition_pseudo_env()</a></code>
+does along a single axis. Where the paddock is not itself a rectangle –
+a clipped corner, a headland left out – a zone is a rectangle
+intersected with the paddock, which is still a block you can drive.</p></dd>
+
+<dt><code>"skater"</code></dt>
+<dd><p>Contiguous zones of any shape. A minimum spanning tree
+is built over the neighbourhood graph – edges weighted by distance
+between cells in standardised covariate space – and pruned one edge at a
+time, always cutting the edge that removes most within-zone variance.
+Every zone is a subtree of a connected graph, so every zone is connected,
+but a zone may send a finger out between two others. Use it when the
+zones are there to describe the soil faithfully rather than to be
+worked, and when a boundary genuinely runs at an angle or along a
+contour. Being free to follow the boundary does not guarantee it fits
+better: both methods are greedy, and a greedy tree pruning can strand
+itself where a well-placed straight cut would not, so rectangles
+sometimes explain more of the covariate variance at the same <code>k</code>.
+Compare the <code>r2</code> column of the returned table on your own paddock rather
+than assuming. The method is SKATER (Assuncao et al. 2006).</p></dd>
+
+<dt><code>"kmeans"</code></dt>
+<dd><p>Plain k-means on the covariates, for comparison. It is
+not contiguous at all: cells are assigned to the zone their soil
+resembles wherever they happen to sit, so zones come back as confetti
+scattered across the paddock. The <code>patches</code> column of the zone summary
+counts the connected pieces of each zone – 1 for every rectangle and
+every skater zone, more than 1 whenever k-means fragments.</p></dd>
+
+
+</dl><p>What the choice costs depends entirely on the shape of the underlying
+feature. On simulated paddocks with one clear feature in one covariate, the
+variance explained at <code>k = 2</code> was:</p>
+<table class="table table"><tr><td><strong>feature</strong></td><td><strong>rectangle</strong></td><td><strong>skater</strong></td></tr><tr><td>block boundaries on the axes</td><td>0.78</td><td>0.78</td></tr><tr><td>a smooth gradient up the paddock</td><td>0.69</td><td>0.67</td></tr><tr><td>a boundary running diagonally</td><td>0.25</td><td>0.98</td></tr><tr><td>a round patch in the middle</td><td>0.13</td><td>0.97</td></tr></table><p>So rectangles cost nothing when the structure is already blocky or a
+gradient, and cost almost everything when the boundary runs at an angle or
+curves – a creek line, a dune, a contour. If your covariate map has a
+feature like that, either use <code>"skater"</code> and accept the awkward shapes, or
+raise <code>k</code> so rectangles can approximate the boundary in steps.</p>
     </div>
     <div class="section level2">
     <h2 id="choosing-k">Choosing k<a class="anchor" aria-label="anchor" href="#choosing-k"></a></h2>
@@ -257,15 +294,15 @@ residual structure.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu">partition_paddock</span><span class="op">(</span><span class="va">g</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"elevation"</span>, <span class="st">"clay"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">zones</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   zone   n  area patches elevation     clay</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    1  60  6000       1  101.0269 18.09524</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2    2 295 29500       1  101.3325 31.87651</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    3  58  5800       1  105.1338 31.89066</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4    4  19  1900       1  105.5933 32.38712</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   zone   n  area patches x_min x_max y_min y_max elevation     clay</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1    1  48  4800       1   130   180   170   240  100.4655 18.11420</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    2  96  9600       1    10   120   170   240  100.4691 31.81901</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    3 126 12600       1    10   180    10    70  100.4996 31.92319</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    4 162 16200       1    10   180    80   160  104.4964 30.91278</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">zone</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   1   2   3   4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  60 295  58  19 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  48  96 126 162 </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

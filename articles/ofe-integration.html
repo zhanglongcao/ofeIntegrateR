@@ -468,16 +468,27 @@ Here is a synthetic elevation and soil layer over the same grid:</p>
 <span><span class="va">pz</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/partition_paddock.html">partition_paddock</a></span><span class="op">(</span><span class="va">kr</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"elevation"</span>, <span class="st">"clay"</span><span class="op">)</span>,</span>
 <span>                        treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">pz</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">zones</span></span>
-<span><span class="co">#&gt;   zone  n area patches elevation     clay treatments</span></span>
-<span><span class="co">#&gt; 1    1 98 7938       1  100.2157 19.77029          3</span></span>
-<span><span class="co">#&gt; 2    2 91 7371       1  100.2412 32.04948          3</span></span>
-<span><span class="co">#&gt; 3    3 65 5265       1  102.7631 32.05240          3</span></span>
-<span><span class="co">#&gt; 4    4 70 5670       1  102.7665 20.09846          3</span></span></code></pre></div>
-<p><code>patches</code> is the number of connected pieces each zone is
-in, and it is 1 for every zone: that is the guarantee the method buys.
-Clustering the same covariates with k-means gives the same broad regions
-in scattered fragments, which is why it is not the default – compare for
-yourself with <code>method = "kmeans"</code>.</p>
+<span><span class="co">#&gt;   zone  n area patches x_min x_max     y_min     y_max elevation     clay</span></span>
+<span><span class="co">#&gt; 1    1 98 7938       1 121.5 238.5 52.581045 106.58104  100.2157 19.77029</span></span>
+<span><span class="co">#&gt; 2    2 91 7371       1   4.5 112.5 52.581045 106.58104  100.2412 32.04948</span></span>
+<span><span class="co">#&gt; 3    3 65 5265       1   4.5 112.5  7.581045  43.58104  102.7631 32.05240</span></span>
+<span><span class="co">#&gt; 4    4 70 5670       1 121.5 238.5  7.581045  43.58104  102.7665 20.09846</span></span>
+<span><span class="co">#&gt;   treatments</span></span>
+<span><span class="co">#&gt; 1          3</span></span>
+<span><span class="co">#&gt; 2          3</span></span>
+<span><span class="co">#&gt; 3          3</span></span>
+<span><span class="co">#&gt; 4          3</span></span></code></pre></div>
+<p>Every zone is a rectangle, and <code>x_min</code>…<code>y_max</code>
+are its corners, so a block can be marked out in the paddock. That is
+what the default <code>method</code> buys: cutting a rectangle all the
+way across leaves two rectangles, so no number of cuts can produce a
+zone that sends a finger out between its neighbours.
+<code>method = "skater"</code> relaxes that to contiguous-but-any-shape,
+which suits a boundary running at an angle;
+<code>method = "kmeans"</code> drops contiguity altogether and is worth
+running once to see why it is not the default. <code>patches</code>
+counts the connected pieces of each zone – 1 throughout here, more than
+1 as soon as k-means fragments.</p>
 <p>The <code>treatments</code> column counts the treatment levels
 present in each zone. Zones of arbitrary shape will often fail to
 contain every treatment, which is exactly when

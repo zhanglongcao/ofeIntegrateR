@@ -98,10 +98,11 @@ comparisons from any other source.</p>
 <code><a href="partition_pseudo_env.html">partition_pseudo_env()</a></code> slices a strip trial across its length from the
 pattern in the dense layer, using the fitted correlation range to stop the
 partition running past the scale the data can support; every treatment stays
-in every zone. <code><a href="partition_paddock.html">partition_paddock()</a></code> clusters environmental covariates –
-elevation, EM38, soil tests – into contiguous regions of any shape, using a
-minimum spanning tree so that a zone cannot come back as scattered cells the
-way k-means leaves it. <code><a href="adaptive_residual.html">adaptive_residual()</a></code> writes the matching <code>dsum()</code>
+in every zone. <code><a href="partition_paddock.html">partition_paddock()</a></code> zones a paddock on environmental
+covariates – elevation, EM38, soil tests – into rectangular blocks by
+default, so the zones are something a machine can drive and a sampling grid
+can follow, with contiguous free-form zones available where the soil matters
+more than the shape. <code><a href="adaptive_residual.html">adaptive_residual()</a></code> writes the matching <code>dsum()</code>
 residual formula for either, demoting <code>ar1()</code> to <code>id()</code> in any zone that
 lacks the extent to support it.</p>
     </div>

@@ -16,7 +16,7 @@ partition_paddock(
   col = NULL,
   x = NULL,
   y = NULL,
-  method = c("skater", "kmeans"),
+  method = c("rectangle", "skater", "kmeans"),
   neighbours = c("auto", "rook", "queen", "knn"),
   n_neighbours = 8L,
   k_max = 8L,
@@ -40,9 +40,10 @@ partition_paddock(
 
 - covariates:
 
-  Character vector of the covariate columns to cluster on, such as
-  `c("elevation", "ec_shallow", "clay")`. Rows missing any of them are
-  dropped.
+  Character vector naming the columns of `data` to zone on, such as
+  `c("elevation", "clay")`. Required, and there is deliberately no
+  default: which layers define a zone is an agronomic decision. All must
+  be numeric; rows missing any of them are dropped.
 
 - k:
 
@@ -61,8 +62,9 @@ partition_paddock(
 
 - method:
 
-  `"skater"` (default, contiguous) or `"kmeans"` (not contiguous; for
-  comparison).
+  `"rectangle"` (default) for rectangular blocks, `"skater"` for
+  contiguous zones of any shape, or `"kmeans"` for unconstrained
+  clustering (not contiguous; for comparison). See above.
 
 - neighbours:
 
@@ -128,27 +130,72 @@ each cell; cells dropped for missing covariates get `NA`. The derivation
 is attached as `attr(, "partition")`: the `method`, `k`, `covariates`,
 the fitted `range`, the `table` of criteria over k (`ssd`, `r2`, the
 marginal `gain`, and `ch`), and a `zones` summary with each zone's cell
-count, area, number of connected `patches`, covariate means and (with
-`treat`) treatment coverage.
+count, area, number of connected `patches`, corner coordinates,
+covariate means and (with `treat`) treatment coverage.
 
-## Why not k-means
+## Shape of the zones
 
-Clustering cells on their covariates alone assigns each cell to the zone
-its soil resembles, wherever the cell happens to sit, so zones come back
-as confetti scattered across the paddock. That is unusable: a machine
-cannot drive it, a sampling plan cannot stratify by it, and a strip
-trial cannot treat it as a pseudo-environment. `method = "skater"` (the
-default) instead builds a minimum spanning tree over the neighbourhood
-graph – edges weighted by distance between cells in standardised
-covariate space – and prunes it one edge at a time, always cutting the
-edge that removes most within-zone variance. Every zone is a subtree of
-a connected graph, so every zone is connected. The method is SKATER
-(Assuncao et al. 2006).
+Three methods, differing only in what shape a zone is allowed to be. The
+choice is a practical one, not a statistical one: a zone has to be
+something a machine can drive and a sampling plan can stratify by.
 
-`method = "kmeans"` runs plain k-means for comparison. It is not
-contiguous, and the `patches` column of the zone summary shows how
-badly: a zone in one piece has `patches = 1`, and anything more is
-fragmentation.
+- `"rectangle"` (default):
+
+  Rectangular blocks. The paddock is cut repeatedly by lines running the
+  full width or full length of the region being split, each cut placed
+  where it removes most within-zone variance. Cutting a rectangle across
+  always leaves two rectangles, so every zone is a rectangle however
+  many cuts are made. This is the shape a variable-rate prescription, a
+  soil sampling grid or a set of management blocks wants, and it is the
+  two-dimensional version of what
+  [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+  does along a single axis. Where the paddock is not itself a rectangle
+  – a clipped corner, a headland left out – a zone is a rectangle
+  intersected with the paddock, which is still a block you can drive.
+
+- `"skater"`:
+
+  Contiguous zones of any shape. A minimum spanning tree is built over
+  the neighbourhood graph – edges weighted by distance between cells in
+  standardised covariate space – and pruned one edge at a time, always
+  cutting the edge that removes most within-zone variance. Every zone is
+  a subtree of a connected graph, so every zone is connected, but a zone
+  may send a finger out between two others. Use it when the zones are
+  there to describe the soil faithfully rather than to be worked, and
+  when a boundary genuinely runs at an angle or along a contour. Being
+  free to follow the boundary does not guarantee it fits better: both
+  methods are greedy, and a greedy tree pruning can strand itself where
+  a well-placed straight cut would not, so rectangles sometimes explain
+  more of the covariate variance at the same `k`. Compare the `r2`
+  column of the returned table on your own paddock rather than assuming.
+  The method is SKATER (Assuncao et al. 2006).
+
+- `"kmeans"`:
+
+  Plain k-means on the covariates, for comparison. It is not contiguous
+  at all: cells are assigned to the zone their soil resembles wherever
+  they happen to sit, so zones come back as confetti scattered across
+  the paddock. The `patches` column of the zone summary counts the
+  connected pieces of each zone – 1 for every rectangle and every skater
+  zone, more than 1 whenever k-means fragments.
+
+What the choice costs depends entirely on the shape of the underlying
+feature. On simulated paddocks with one clear feature in one covariate,
+the variance explained at `k = 2` was:
+
+|                                  |               |            |
+|----------------------------------|---------------|------------|
+| **feature**                      | **rectangle** | **skater** |
+| block boundaries on the axes     | 0.78          | 0.78       |
+| a smooth gradient up the paddock | 0.69          | 0.67       |
+| a boundary running diagonally    | 0.25          | 0.98       |
+| a round patch in the middle      | 0.13          | 0.97       |
+
+So rectangles cost nothing when the structure is already blocky or a
+gradient, and cost almost everything when the boundary runs at an angle
+or curves – a creek line, a dune, a contour. If your covariate map has a
+feature like that, either use `"skater"` and accept the awkward shapes,
+or raise `k` so rectangles can approximate the boundary in steps.
 
 ## Choosing k
 
@@ -219,13 +266,13 @@ g$clay <- g$clay + stats::rnorm(nrow(g), 0, 1)
 
 z <- partition_paddock(g, covariates = c("elevation", "clay"))
 attr(z, "partition")$zones
-#>   zone   n  area patches elevation     clay
-#> 1    1  60  6000       1  101.0269 18.09524
-#> 2    2 295 29500       1  101.3325 31.87651
-#> 3    3  58  5800       1  105.1338 31.89066
-#> 4    4  19  1900       1  105.5933 32.38712
+#>   zone   n  area patches x_min x_max y_min y_max elevation     clay
+#> 1    1  48  4800       1   130   180   170   240  100.4655 18.11420
+#> 2    2  96  9600       1    10   120   170   240  100.4691 31.81901
+#> 3    3 126 12600       1    10   180    10    70  100.4996 31.92319
+#> 4    4 162 16200       1    10   180    80   160  104.4964 30.91278
 table(z$zone)
 #> 
 #>   1   2   3   4 
-#>  60 295  58  19 
+#>  48  96 126 162 
 ```

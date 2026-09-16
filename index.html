@@ -241,16 +241,58 @@
 <code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/partition_paddock.html">partition_paddock</a></span><span class="op">(</span><span class="va">g</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"elevation"</span>, <span class="st">"ec_shallow"</span>, <span class="st">"clay"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">zones</span>   <span class="co"># cells, area, patches, covariate means per zone</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">table</span>   <span class="co"># ssd, r2, marginal gain and CH at each k</span></span></code></pre></div>
-<p><strong>Zones are contiguous by construction.</strong> This is the point. Clustering cells on their covariates alone puts a cell in the zone its soil resembles wherever it happens to sit, so k-means hands back confetti — no machine can drive it and no sampling plan can stratify by it. <code><a href="reference/partition_paddock.html">partition_paddock()</a></code> instead builds a minimum spanning tree over the neighbourhood graph, edges weighted by distance in standardised covariate space, and prunes it one edge at a time, always cutting where most within-zone variance disappears. Every zone is a subtree, so every zone is connected. The method is SKATER (Assunção et al. 2006). On the same ridge-and-sandy-corner paddock at k = 4:</p>
-<pre><code> skater                  kmeans
- 222222222222111111      111111111111222222
- 222222222222111111      111111111111222222
- 222222222233111111      131111313133222222   &lt;- zone 3 in two pieces,
- 222222223333111111      333333333333222222      speckled through zone 1
- 222222333333333333      333333333333333333
- 444422233333333333      313111111113131333
- 444422222333333333      111111111111111111</code></pre>
-<p><code>patches</code> in the zone summary counts the connected pieces of each zone: 1 for every skater zone, more than 1 whenever k-means fragments. <code>method = "kmeans"</code> is kept so the comparison can be made on your own paddock.</p>
+<p><strong>The shape of a zone is a practical decision</strong>, so there are three methods and they differ only in that. Same ridge-and-sandy-corner paddock, k = 4:</p>
+<pre><code> rectangle (default)     skater                  kmeans
+ 222222222222111111      222222222222111111      111111111111222222
+ 222222222222111111      222222222222111111      111111111111222222
+ 222222222222111111      222222222233111111      131111313133222222
+ 444444444444444444      222222223333111111      333333333333222222
+ 444444444444444444      222222333333333333      333333333333333333
+ 444444444444444444      444422233333333333      313111111113131333
+ 333333333333333333      444422222333333333      111111111111111111
+ 333333333333333333      222222222222222222      111111111111111111</code></pre>
+<ul>
+<li>
+<strong><code>"rectangle"</code> (default)</strong> — the paddock is cut by lines running the full width or length of the region being split, each placed where it removes most within-zone variance. Cutting a rectangle across leaves two rectangles, so every zone is a rectangle however many cuts are made. This is what a variable-rate prescription, a sampling grid or a set of management blocks wants, and the zone summary gives each block’s corners (<code>x_min</code>…<code>y_max</code>) so it can be marked out. It is the two-dimensional version of what <code><a href="reference/partition_pseudo_env.html">partition_pseudo_env()</a></code> does along one axis.</li>
+<li>
+<strong><code>"skater"</code></strong> — contiguous, but any shape: a minimum spanning tree over the neighbourhood graph, edges weighted by distance in standardised covariate space, pruned one edge at a time. Every zone is a subtree, so every zone is connected — but a zone may send a finger out between two others, as zones 2 and 3 do above. Right when the zones are there to describe the soil rather than to be worked, or when a boundary really runs at an angle. Note it does not automatically fit better for being freer: both methods are greedy, and on this paddock the rectangles explain more (r² 0.78 against 0.73). Compare the <code>r2</code> column rather than assuming.</li>
+<li>
+<strong><code>"kmeans"</code></strong> — not contiguous at all. Cells go to the zone their soil resembles wherever they sit, so zones arrive as confetti. Kept for comparison; <code>patches</code> in the zone summary counts the connected pieces of each zone, which is 1 throughout for the first two methods and more than 1 whenever k-means fragments.</li>
+</ul>
+<p>What the choice costs depends on the shape of the underlying feature. Variance explained at k = 2, on simulated paddocks with one clear feature:</p>
+<table class="table">
+<thead><tr>
+<th>feature</th>
+<th><code>"rectangle"</code></th>
+<th><code>"skater"</code></th>
+</tr></thead>
+<tbody>
+<tr>
+<td>block boundaries on the axes</td>
+<td>0.78</td>
+<td>0.78</td>
+</tr>
+<tr>
+<td>a smooth gradient up the paddock</td>
+<td>0.69</td>
+<td>0.67</td>
+</tr>
+<tr>
+<td>a boundary running diagonally</td>
+<td>0.25</td>
+<td><strong>0.98</strong></td>
+</tr>
+<tr>
+<td>a round patch in the middle</td>
+<td>0.13</td>
+<td><strong>0.97</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Rectangles cost nothing when the structure is blocky or a gradient, and cost almost everything when the boundary runs at an angle or curves — a creek line, a dune, a contour. With a feature like that, either use <code>"skater"</code> and accept the shapes, or raise <code>k</code> so rectangles can approximate the boundary in steps.</p>
+<p><code>covariates</code> is required and names columns of <code>data</code> — there is no default, because which layers define a zone is agronomy rather than something the function can guess:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/partition_paddock.html">partition_paddock</a></span><span class="op">(</span><span class="va">dat</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"elevation"</span>, <span class="st">"soil"</span><span class="op">)</span><span class="op">)</span>   <span class="co"># those two columns</span></span></code></pre></div>
 <p>Leave <code>k</code> unset and zones are added while each one earns its keep — the default stops at the first <code>k</code> whose successor would explain less than 5% more of the covariate variance (<code>min_gain</code>). A paddock uniform in its covariates comes back as one zone rather than being carved up anyway. <code>criterion = "ch"</code> (Calinski–Harabasz) is available, with the caveat in <code><a href="reference/partition_paddock.html">?partition_paddock</a></code> that on a smoothly varying covariate it often has no interior maximum and just picks <code>k_max</code>.</p>
 <p>Pass <code>treat</code> and each zone’s treatment coverage is reported, with a warning if a zone is missing a level — a zone that does not contain every treatment cannot support a <code>zone:treat</code> term, and that is better found here than in a rank deficiency later.</p>
 <p>Two cautions, both in <code><a href="reference/partition_pseudo_env.html">?partition_pseudo_env</a></code>. A smooth field with no step at all will still be split about two-thirds of the time under the defaults, so read a zone as “this part of the paddock behaves differently”, not as evidence of a boundary. And zones derived from the same yield data that then estimate zone-specific treatment effects will overstate those differences, because the boundaries were placed where the residuals already differed — use them for the residual structure freely, and confirm a zone-by-treatment interaction against an independent layer (elevation, EM38, a prior season’s yield) by passing that layer as <code>response</code> instead.</p>
@@ -325,7 +367,7 @@
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># The same call on any engine</span></span>
 <span><span class="fu"><a href="reference/fit_integrated_kriged.html">fit_integrated_kriged</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
 <span>                      covariate <span class="op">=</span> <span class="st">"soil_n_kriged"</span>, random <span class="op">=</span> <span class="op">~</span> <span class="va">rep</span><span class="op">)</span></span></code></pre></div>
@@ -343,7 +385,7 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"zhanglongcao/ofeIntegrateR"</span><span class="op">)</span></span></code></pre></div>
 <p>Documentation: <a href="https://www.zcao.space/ofeIntegrateR/" class="uri">https://www.zcao.space/ofeIntegrateR/</a></p>
@@ -352,7 +394,7 @@
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zhanglongcao/ofeIntegrateR" class="external-link">ofeIntegrateR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># A trial as a yield monitor actually records it: points along passes,</span></span>

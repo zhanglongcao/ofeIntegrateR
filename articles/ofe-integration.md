@@ -431,18 +431,28 @@ kr$clay <- kr$clay + rnorm(nrow(kr), 0, 1)
 pz <- partition_paddock(kr, covariates = c("elevation", "clay"),
                         treat = "treat")
 attr(pz, "partition")$zones
-#>   zone  n area patches elevation     clay treatments
-#> 1    1 98 7938       1  100.2157 19.77029          3
-#> 2    2 91 7371       1  100.2412 32.04948          3
-#> 3    3 65 5265       1  102.7631 32.05240          3
-#> 4    4 70 5670       1  102.7665 20.09846          3
+#>   zone  n area patches x_min x_max     y_min     y_max elevation     clay
+#> 1    1 98 7938       1 121.5 238.5 52.581045 106.58104  100.2157 19.77029
+#> 2    2 91 7371       1   4.5 112.5 52.581045 106.58104  100.2412 32.04948
+#> 3    3 65 5265       1   4.5 112.5  7.581045  43.58104  102.7631 32.05240
+#> 4    4 70 5670       1 121.5 238.5  7.581045  43.58104  102.7665 20.09846
+#>   treatments
+#> 1          3
+#> 2          3
+#> 3          3
+#> 4          3
 ```
 
-`patches` is the number of connected pieces each zone is in, and it is 1
-for every zone: that is the guarantee the method buys. Clustering the
-same covariates with k-means gives the same broad regions in scattered
-fragments, which is why it is not the default – compare for yourself
-with `method = "kmeans"`.
+Every zone is a rectangle, and `x_min`…`y_max` are its corners, so a
+block can be marked out in the paddock. That is what the default
+`method` buys: cutting a rectangle all the way across leaves two
+rectangles, so no number of cuts can produce a zone that sends a finger
+out between its neighbours. `method = "skater"` relaxes that to
+contiguous-but-any-shape, which suits a boundary running at an angle;
+`method = "kmeans"` drops contiguity altogether and is worth running
+once to see why it is not the default. `patches` counts the connected
+pieces of each zone – 1 throughout here, more than 1 as soon as k-means
+fragments.
 
 The `treatments` column counts the treatment levels present in each
 zone. Zones of arbitrary shape will often fail to contain every
