@@ -31,6 +31,7 @@ is used where licensed, but nothing here requires a commercial licence.
 | Write the residual structure those zones imply | `adaptive_residual()` |
 | Fit the spatial mixed model by REML, no licence needed | `fit_ofe()` |
 | Test the fixed terms, and get predicted treatment means | `wald_tests()`, `ofe_means()` |
+| Report the means with an LSD and a/b/c letters | `ofe_lsd()` |
 | Fit the baseline and the integrated model, and compare | `compare_integration()` |
 | Fit either model on its own | `fit_integrated_kriged()` |
 | Model both layers jointly instead | `fit_integrated_joint()` |
@@ -65,6 +66,39 @@ wald_tests(fit)                   # like wald.asreml(): one test per term
 ofe_means(fit, "treat")           # like predict.asreml(): treatment means
 ofe_means(fit, "treat", pairwise = TRUE)   # contrasts with their SEDs
 ```
+
+For the table that actually goes in the report — means, LSD, and the letters
+next to them — `ofe_lsd()`:
+
+```r
+tab <- ofe_lsd(fit, "treat")            # means sorted best-first, with a/b/c
+attr(tab, "lsd")                        # average SED, LSD, df, settings
+attr(tab, "comparisons")                # every pairwise test behind the letters
+```
+
+```
+  treat estimate std.error  lower  upper group
+1     F   14.820     0.375 14.063 15.577     a
+2     E   12.769     0.375 12.011 13.526     b
+3     D   11.854     0.375 11.096 12.611    bc
+4     C   11.511     0.375 10.754 12.268     c
+5     B   10.294     0.375  9.536 11.051     d
+6     A    9.674     0.375  8.917 10.432     d
+```
+
+On a balanced design this reproduces `agricolae::LSD.test()` exactly — the same
+LSD value and the same letters — and `adjust = "tukey"` reproduces
+`agricolae::HSD.test()`. Where it differs is on the data this package is for:
+by default each pair is judged on **its own** standard error of difference,
+because in a spatial model neighbouring strips really are compared more
+precisely than distant ones. Pass `use = "lsd"` for the single average LSD a
+published table usually means.
+
+`by = "zone"` letters the means within each pseudo-environment separately —
+comparisons never cross a zone, and each zone gets its own LSD. And
+`compact_letters()` will letter a pairwise table from anywhere else
+(`asreml::predict()`, `emmeans`, a table typed by hand), so the same annotation
+can be put on a fit this package did not produce.
 
 The `residual` argument takes the asreml spellings, combined with `:` for a
 separable structure:

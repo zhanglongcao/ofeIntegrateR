@@ -40,6 +40,14 @@ in base R. \code{\link[=wald_tests]{wald_tests()}} and \code{\link[=ofe_means]{o
 agrees with \code{asreml::asreml()} to several significant figures.
 }
 
+\section{Report the means}{
+
+\code{\link[=ofe_lsd]{ofe_lsd()}} gives the predicted means with their least significant
+difference and the a/b/c letters, matching \code{agricolae::LSD.test()} and
+\code{HSD.test()} on a balanced design. \code{\link[=compact_letters]{compact_letters()}} letters pairwise
+comparisons from any other source.
+}
+
 \section{Pseudo-environments}{
 
 \code{\link[=partition_pseudo_env]{partition_pseudo_env()}} derives contiguous zones from the spatial pattern

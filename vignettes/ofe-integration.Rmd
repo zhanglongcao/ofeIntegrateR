@@ -216,6 +216,32 @@ ofe_means(fit, "treat")
 ofe_means(fit, "treat", pairwise = TRUE)
 ```
 
+`ofe_lsd()` puts those together into the table a report prints: means sorted
+best-first, with the a/b/c letters. Levels sharing a letter are not separable
+at `alpha`.
+
+```{r}
+tab <- ofe_lsd(fit, "treat")
+tab
+attr(tab, "lsd")
+```
+
+On a balanced design this reproduces `agricolae::LSD.test()` exactly, and
+`adjust = "tukey"` reproduces `agricolae::HSD.test()`. The default here differs
+from both in one respect that matters for a spatial model: each pair is judged
+on its own standard error of difference, because neighbouring strips are
+compared more precisely than distant ones. Pass `use = "lsd"` for the single
+average LSD a published table usually means, and quote the value from
+`attr(tab, "lsd")` with it.
+
+The default `adjust = "none"` gives unprotected comparisons — the convention
+these letters usually carry, and not a family-wise error rate. With more than
+three or four treatments, say so in the caption or adjust:
+
+```{r}
+ofe_lsd(fit, "treat", adjust = "tukey")
+```
+
 ## Step 5 — pseudo-environments
 
 A strip runs the length of the paddock, and the treatment effect at one end
@@ -260,7 +286,10 @@ one call:
 ```{r}
 if (nlevels(z$zone) > 1) {
   fit_z <- fit_ofe(yield ~ zone + zone:treat, data = z, residual = r)
-  wald_tests(fit_z)
+  print(wald_tests(fit_z))
+  # One lettering per zone: comparisons never cross a zone boundary, and
+  # each zone gets its own LSD.
+  print(ofe_lsd(fit_z, "treat", by = "zone"))
 }
 ```
 

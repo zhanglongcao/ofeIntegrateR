@@ -4,22 +4,42 @@
 \alias{ofe_means}
 \title{Predicted means for a fixed term}
 \usage{
-ofe_means(object, term, pairwise = FALSE, level = 0.95)
+ofe_means(
+  object,
+  term,
+  by = NULL,
+  pairwise = FALSE,
+  level = 0.95,
+  adjust = "none"
+)
 }
 \arguments{
 \item{object}{An \code{ofe_fit} from \code{\link[=fit_ofe]{fit_ofe()}}.}
 
 \item{term}{Character; the name of a factor in the fixed model.}
 
+\item{by}{Character or \code{NULL}; a second factor to compute the means within,
+one set per level of it. Use this for a pseudo-environment analysis --
+\code{ofe_means(fit, "treat", by = "zone")} gives the treatment means of each
+zone. Means are averaged over the rows belonging to that level only, and
+comparisons are made within a level, never across.}
+
 \item{pairwise}{Logical; return all pairwise differences rather than the
 means themselves.}
 
 \item{level}{Numeric; confidence level for the interval (default 0.95).}
+
+\item{adjust}{Multiplicity adjustment applied to the pairwise p-values:
+\code{"none"} (the default, i.e. unprotected LSD comparisons), \code{"tukey"},
+\code{"sidak"}, or any method taken by \code{\link[stats:p.adjust]{stats::p.adjust()}}. Ignored when
+\code{pairwise = FALSE}. With \code{by}, the adjustment counts the comparisons
+within a level, not across all of them.}
 }
 \value{
-A data frame of predicted means (\code{term} level, \code{estimate},
-\code{std.error}, \code{lower}, \code{upper}) or, when \code{pairwise = TRUE}, of differences
-(\code{contrast}, \code{estimate}, \code{std.error}, \code{statistic}, \code{p.value}).
+A data frame of predicted means (the \code{by} level where given, the
+\code{term} level, \code{estimate}, \code{std.error}, \code{lower}, \code{upper}) or, when
+\code{pairwise = TRUE}, of differences (\code{level1}, \code{level2}, \code{contrast},
+\code{estimate}, \code{std.error}, \code{statistic}, \code{p.value}).
 }
 \description{
 The analogue of \code{predict.asreml()}: the model-based mean of each level of a
@@ -33,5 +53,9 @@ sim <- simulate_ofe_trial(n_row = 16, n_col = 8, seed = 1)
 fit <- fit_ofe(dense_response ~ treat, data = sim$grid)
 ofe_means(fit, "treat")
 ofe_means(fit, "treat", pairwise = TRUE)
+ofe_means(fit, "treat", pairwise = TRUE, adjust = "tukey")
 
+}
+\seealso{
+\code{\link[=ofe_lsd]{ofe_lsd()}}, which adds the a/b/c letters to the means.
 }

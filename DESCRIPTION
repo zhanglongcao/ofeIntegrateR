@@ -12,7 +12,8 @@ Description: A workflow for on-farm experimentation (OFE) strip trials,
     fits spatial mixed models by residual maximum likelihood with separable
     'ASReml'-style residual structures -- 'ar1()', 'exp()', 'diag()' and
     'dsum()' sections -- written in base R, so that the analysis needs no
-    commercial licence. Sparse point-source variables (soil cores, tissue
+    commercial licence. Reports predicted treatment means with least
+    significant differences and compact letter displays. Sparse point-source variables (soil cores, tissue
     tests) can be integrated with the dense layer by a kriged covariate or a
     joint bivariate spatial model. 'ASReml-R' is used automatically where it
     is licensed. Developed for the AAGI-CU-RD-OFE GRDC project.
@@ -29,6 +30,7 @@ Imports:
     stats,
     utils
 Suggests:
+    agricolae,
     agridat,
     asreml,
     knitr,

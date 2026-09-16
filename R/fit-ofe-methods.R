@@ -144,6 +144,106 @@ wald_tests.ofe_fit <- function(object, ...) {
   out
 }
 
+# Build the contrast matrix L whose rows are the predicted cells: one row per
+# level of `term`, or per level of `term` within each level of `by`. Shared by
+# ofe_means() and ofe_lsd() so the means, the comparisons and the letters can
+# never disagree with one another.
+#' @keywords internal
+#' @noRd
+.ofe_cells <- function(object, term, by = NULL) {
+  stopifnot(inherits(object, "ofe_fit"))
+  dat <- object$data
+  for (v in c(term, by)) {
+    if (!v %in% names(dat)) {
+      stop("`", v, "` is not a column of the fitted data.", call. = FALSE)
+    }
+  }
+  lv <- object$xlevels[[term]]
+  if (is.null(lv)) lv <- levels(factor(dat[[term]]))
+  if (length(lv) < 2L) {
+    stop("`", term, "` has fewer than two levels.", call. = FALSE)
+  }
+
+  if (is.null(by)) {
+    groups <- list(seq_len(nrow(dat)))
+    by_lv <- NA_character_
+  } else {
+    blv <- object$xlevels[[by]]
+    if (is.null(blv)) blv <- levels(factor(dat[[by]]))
+    bf <- factor(as.character(dat[[by]]), levels = blv)
+    groups <- split(seq_len(nrow(dat)), bf)
+    groups <- groups[lengths(groups) > 0L]
+    by_lv <- names(groups)
+    if (length(groups) == 0L) {
+      stop("`", by, "` has no levels with data.", call. = FALSE)
+    }
+  }
+
+  mt <- stats::delete.response(object$terms)
+  keep_cols <- names(object$coefficients)
+  rows <- list()
+  lab_by <- character(0)
+  lab_lv <- character(0)
+  for (g in seq_along(groups)) {
+    base <- dat[groups[[g]], , drop = FALSE]
+    for (l in lv) {
+      nd <- base
+      nd[[term]] <- factor(rep(l, nrow(nd)), levels = lv)
+      mm <- stats::model.matrix(mt, stats::model.frame(mt, nd,
+                                                       xlev = object$xlevels))
+      rows[[length(rows) + 1L]] <- colMeans(mm[, keep_cols, drop = FALSE])
+      lab_by <- c(lab_by, if (is.null(by)) NA_character_ else by_lv[g])
+      lab_lv <- c(lab_lv, l)
+    }
+  }
+  L <- do.call(rbind, rows)
+  colnames(L) <- keep_cols
+
+  list(L = L, level = lab_lv, by = lab_by, levels = lv,
+       by_levels = if (is.null(by)) NULL else by_lv,
+       estimate = drop(L %*% object$coefficients),
+       V = L %*% object$vcov %*% t(L),
+       den_df = object$n - object$p)
+}
+
+#' Multiplicity adjustment for a set of pairwise comparisons
+#' @keywords internal
+#' @noRd
+.ofe_adjust_p <- function(p, tstat, method, n_means, df) {
+  switch(
+    method,
+    none  = p,
+    tukey = stats::ptukey(abs(tstat) * sqrt(2), nmeans = n_means, df = df,
+                          lower.tail = FALSE),
+    sidak = pmin(1, 1 - (1 - p)^length(p)),
+    stats::p.adjust(p, method = method)
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.ofe_adjust_methods <- c("none", "tukey", "sidak", "bonferroni", "holm",
+                         "hochberg", "hommel", "BH", "BY", "fdr")
+
+#' Pairwise comparisons within one predicted-cell group
+#' @keywords internal
+#' @noRd
+.ofe_pairs <- function(est, V, lv, den_df, adjust) {
+  cmb <- utils::combn(seq_along(lv), 2)
+  d <- est[cmb[2, ]] - est[cmb[1, ]]
+  sed <- sqrt(V[cbind(cmb[1, ], cmb[1, ])] + V[cbind(cmb[2, ], cmb[2, ])] -
+                2 * V[cbind(cmb[1, ], cmb[2, ])])
+  tv <- d / sed
+  praw <- 2 * stats::pt(abs(tv), den_df, lower.tail = FALSE)
+  data.frame(level1 = lv[cmb[1, ]], level2 = lv[cmb[2, ]],
+             contrast = paste(lv[cmb[2, ]], "-", lv[cmb[1, ]]),
+             estimate = unname(d), std.error = unname(sed),
+             statistic = unname(tv),
+             p.value = unname(.ofe_adjust_p(praw, tv, adjust, length(lv),
+                                            den_df)),
+             stringsAsFactors = FALSE)
+}
+
 #' Predicted means for a fixed term
 #'
 #' The analogue of `predict.asreml()`: the model-based mean of each level of a
@@ -154,68 +254,74 @@ wald_tests.ofe_fit <- function(object, ...) {
 #'
 #' @param object An `ofe_fit` from [fit_ofe()].
 #' @param term Character; the name of a factor in the fixed model.
+#' @param by Character or `NULL`; a second factor to compute the means within,
+#'   one set per level of it. Use this for a pseudo-environment analysis --
+#'   `ofe_means(fit, "treat", by = "zone")` gives the treatment means of each
+#'   zone. Means are averaged over the rows belonging to that level only, and
+#'   comparisons are made within a level, never across.
 #' @param pairwise Logical; return all pairwise differences rather than the
 #'   means themselves.
 #' @param level Numeric; confidence level for the interval (default 0.95).
+#' @param adjust Multiplicity adjustment applied to the pairwise p-values:
+#'   `"none"` (the default, i.e. unprotected LSD comparisons), `"tukey"`,
+#'   `"sidak"`, or any method taken by [stats::p.adjust()]. Ignored when
+#'   `pairwise = FALSE`. With `by`, the adjustment counts the comparisons
+#'   within a level, not across all of them.
 #'
-#' @return A data frame of predicted means (`term` level, `estimate`,
-#'   `std.error`, `lower`, `upper`) or, when `pairwise = TRUE`, of differences
-#'   (`contrast`, `estimate`, `std.error`, `statistic`, `p.value`).
+#' @return A data frame of predicted means (the `by` level where given, the
+#'   `term` level, `estimate`, `std.error`, `lower`, `upper`) or, when
+#'   `pairwise = TRUE`, of differences (`level1`, `level2`, `contrast`,
+#'   `estimate`, `std.error`, `statistic`, `p.value`).
+#'
+#' @seealso [ofe_lsd()], which adds the a/b/c letters to the means.
 #'
 #' @examples
 #' sim <- simulate_ofe_trial(n_row = 16, n_col = 8, seed = 1)
 #' fit <- fit_ofe(dense_response ~ treat, data = sim$grid)
 #' ofe_means(fit, "treat")
 #' ofe_means(fit, "treat", pairwise = TRUE)
+#' ofe_means(fit, "treat", pairwise = TRUE, adjust = "tukey")
 #'
 #' @export
-ofe_means <- function(object, term, pairwise = FALSE, level = 0.95) {
-  stopifnot(inherits(object, "ofe_fit"))
-  dat <- object$data
-  if (!term %in% names(dat)) {
-    stop("`", term, "` is not a column of the fitted data.", call. = FALSE)
-  }
-  lv <- object$xlevels[[term]]
-  if (is.null(lv)) lv <- levels(factor(dat[[term]]))
-  if (length(lv) < 2L) {
-    stop("`", term, "` has fewer than two levels.", call. = FALSE)
-  }
+ofe_means <- function(object, term, by = NULL, pairwise = FALSE, level = 0.95,
+                      adjust = "none") {
+  adjust <- match.arg(adjust, .ofe_adjust_methods)
+  cells <- .ofe_cells(object, term, by)
+  lv <- cells$levels
+  den_df <- cells$den_df
 
-  mt <- stats::delete.response(object$terms)
-  keep_cols <- names(object$coefficients)
-  L <- t(vapply(lv, function(l) {
-    nd <- dat
-    nd[[term]] <- factor(rep(l, nrow(nd)), levels = lv)
-    mm <- stats::model.matrix(mt, stats::model.frame(mt, nd,
-                                                     xlev = object$xlevels))
-    colMeans(mm[, keep_cols, drop = FALSE])
-  }, numeric(length(keep_cols))))
-  rownames(L) <- lv
-
-  est <- drop(L %*% object$coefficients)
-  V <- L %*% object$vcov %*% t(L)
-  den_df <- object$n - object$p
+  grp <- if (is.null(by)) rep(1L, length(cells$level)) else
+    match(cells$by, cells$by_levels)
 
   if (!pairwise) {
-    se <- sqrt(diag(V))
+    se <- sqrt(diag(cells$V))
     q <- stats::qt(1 - (1 - level) / 2, df = den_df)
-    out <- data.frame(level = lv, estimate = unname(est),
+    out <- data.frame(level = cells$level, estimate = unname(cells$estimate),
                       std.error = unname(se),
-                      lower = unname(est - q * se),
-                      upper = unname(est + q * se),
+                      lower = unname(cells$estimate - q * se),
+                      upper = unname(cells$estimate + q * se),
                       stringsAsFactors = FALSE)
     names(out)[1] <- term
+    if (!is.null(by)) {
+      out <- cbind(stats::setNames(data.frame(cells$by,
+                                              stringsAsFactors = FALSE), by),
+                   out)
+    }
     return(out)
   }
 
-  cmb <- utils::combn(seq_along(lv), 2)
-  d <- est[cmb[2, ]] - est[cmb[1, ]]
-  sed <- sqrt(V[cbind(cmb[1, ], cmb[1, ])] + V[cbind(cmb[2, ], cmb[2, ])] -
-                2 * V[cbind(cmb[1, ], cmb[2, ])])
-  tv <- d / sed
-  data.frame(contrast = paste(lv[cmb[2, ]], "-", lv[cmb[1, ]]),
-             estimate = unname(d), std.error = unname(sed),
-             statistic = unname(tv),
-             p.value = 2 * stats::pt(abs(tv), den_df, lower.tail = FALSE),
-             stringsAsFactors = FALSE)
+  parts <- lapply(sort(unique(grp)), function(g) {
+    i <- which(grp == g)
+    tab <- .ofe_pairs(cells$estimate[i], cells$V[i, i, drop = FALSE],
+                      cells$level[i], den_df, adjust)
+    if (!is.null(by)) {
+      tab <- cbind(stats::setNames(data.frame(rep(cells$by[i][1], nrow(tab)),
+                                              stringsAsFactors = FALSE), by),
+                   tab)
+    }
+    tab
+  })
+  out <- do.call(rbind, parts)
+  rownames(out) <- NULL
+  out
 }

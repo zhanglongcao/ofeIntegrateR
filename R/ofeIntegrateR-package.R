@@ -26,6 +26,12 @@
 #' `wald.asreml()` and `predict.asreml()`. On the structures both support it
 #' agrees with `asreml::asreml()` to several significant figures.
 #'
+#' @section Report the means:
+#' [ofe_lsd()] gives the predicted means with their least significant
+#' difference and the a/b/c letters, matching `agricolae::LSD.test()` and
+#' `HSD.test()` on a balanced design. [compact_letters()] letters pairwise
+#' comparisons from any other source.
+#'
 #' @section Pseudo-environments:
 #' [partition_pseudo_env()] derives contiguous zones from the spatial pattern
 #' of the dense layer, using the fitted correlation range to stop the

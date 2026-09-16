@@ -51,6 +51,14 @@ reference:
   - wald_tests
   - ofe_means
 
+- title: Reporting the means
+  desc: >
+    Predicted means with least significant differences and the a/b/c letters a
+    trial report prints beside them.
+  contents:
+  - ofe_lsd
+  - compact_letters
+
 - title: Finding pseudo-environments
   desc: >
     Cutting the trial into zones the spatial covariance can actually support,
