@@ -409,6 +409,48 @@ if (nlevels(z$zone) > 1) {
 }
 ```
 
+### Zoning from covariates instead, when you have them
+
+[`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+works from the response and cuts across the trial, so every treatment
+stays in every zone. When the zones should instead come from what is
+known before harvest – elevation, an EM38 or gamma survey, a soil test
+grid – and may be any shape,
+[`partition_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/partition_paddock.md)
+clusters those covariates directly. Here is a synthetic elevation and
+soil layer over the same grid:
+
+``` r
+
+kr$elevation <- 100 + 4 * exp(-((kr$y_centre - 30)^2) / 400)
+kr$clay <- ifelse(kr$x_centre > 120, 20, 32)
+set.seed(3)
+kr$elevation <- kr$elevation + rnorm(nrow(kr), 0, 0.2)
+kr$clay <- kr$clay + rnorm(nrow(kr), 0, 1)
+
+pz <- partition_paddock(kr, covariates = c("elevation", "clay"),
+                        treat = "treat")
+attr(pz, "partition")$zones
+#>   zone  n area patches elevation     clay treatments
+#> 1    1 98 7938       1  100.2157 19.77029          3
+#> 2    2 91 7371       1  100.2412 32.04948          3
+#> 3    3 65 5265       1  102.7631 32.05240          3
+#> 4    4 70 5670       1  102.7665 20.09846          3
+```
+
+`patches` is the number of connected pieces each zone is in, and it is 1
+for every zone: that is the guarantee the method buys. Clustering the
+same covariates with k-means gives the same broad regions in scattered
+fragments, which is why it is not the default – compare for yourself
+with `method = "kmeans"`.
+
+The `treatments` column counts the treatment levels present in each
+zone. Zones of arbitrary shape will often fail to contain every
+treatment, which is exactly when
+[`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+is the right tool instead: a zone that does not see all the treatments
+cannot support a `zone:treat` term.
+
 Two cautions. Zones found this way are a description of where the
 paddock differs, not proof of a boundary — a smooth field with no step
 in it is still split more often than not. And because the cuts were

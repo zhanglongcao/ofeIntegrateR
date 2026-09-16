@@ -53,13 +53,19 @@ letters pairwise comparisons from any other source.
 
 ## Pseudo-environments
 
+Two ways to find them, for two different questions.
 [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
-derives contiguous zones from the spatial pattern of the dense layer,
-using the fitted correlation range to stop the partition running past
-the scale the data can support, and
+slices a strip trial across its length from the pattern in the dense
+layer, using the fitted correlation range to stop the partition running
+past the scale the data can support; every treatment stays in every
+zone.
+[`partition_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/partition_paddock.md)
+clusters environmental covariates – elevation, EM38, soil tests – into
+contiguous regions of any shape, using a minimum spanning tree so that a
+zone cannot come back as scattered cells the way k-means leaves it.
 [`adaptive_residual()`](https://www.zcao.space/ofeIntegrateR/reference/adaptive_residual.md)
-writes the matching `dsum()` residual formula – demoting `ar1()` to
-`id()` in any zone that lacks the extent to support it.
+writes the matching `dsum()` residual formula for either, demoting
+`ar1()` to `id()` in any zone that lacks the extent to support it.
 
 ## Integrate a point-source layer
 

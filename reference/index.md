@@ -70,12 +70,16 @@ a trial report prints beside them.
 
 ## Finding pseudo-environments
 
-Cutting the trial into zones the spatial covariance can actually
-support, and writing the residual structure that follows from them.
+Cutting the trial into zones — across its length from the yield pattern,
+or into contiguous regions from elevation and soil — and writing the
+residual structure that follows from them.
 
 - [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
   : Derive pseudo-environments from the spatial pattern of the dense
   layer
+- [`partition_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/partition_paddock.md)
+  : Partition a paddock into contiguous zones from environmental
+  covariates
 - [`adaptive_residual()`](https://www.zcao.space/ofeIntegrateR/reference/adaptive_residual.md)
   : Build a residual structure that matches the realised geometry
 

@@ -94,11 +94,16 @@ comparisons from any other source.</p>
     <h2 id="pseudo-environments">Pseudo-environments<a class="anchor" aria-label="anchor" href="#pseudo-environments"></a></h2>
 
 
-<p><code><a href="partition_pseudo_env.html">partition_pseudo_env()</a></code> derives contiguous zones from the spatial pattern
-of the dense layer, using the fitted correlation range to stop the
-partition running past the scale the data can support, and
-<code><a href="adaptive_residual.html">adaptive_residual()</a></code> writes the matching <code>dsum()</code> residual formula –
-demoting <code>ar1()</code> to <code>id()</code> in any zone that lacks the extent to support it.</p>
+<p>Two ways to find them, for two different questions.
+<code><a href="partition_pseudo_env.html">partition_pseudo_env()</a></code> slices a strip trial across its length from the
+pattern in the dense layer, using the fitted correlation range to stop the
+partition running past the scale the data can support; every treatment stays
+in every zone. <code><a href="partition_paddock.html">partition_paddock()</a></code> clusters environmental covariates –
+elevation, EM38, soil tests – into contiguous regions of any shape, using a
+minimum spanning tree so that a zone cannot come back as scattered cells the
+way k-means leaves it. <code><a href="adaptive_residual.html">adaptive_residual()</a></code> writes the matching <code>dsum()</code>
+residual formula for either, demoting <code>ar1()</code> to <code>id()</code> in any zone that
+lacks the extent to support it.</p>
     </div>
     <div class="section level2">
     <h2 id="integrate-a-point-source-layer">Integrate a point-source layer<a class="anchor" aria-label="anchor" href="#integrate-a-point-source-layer"></a></h2>

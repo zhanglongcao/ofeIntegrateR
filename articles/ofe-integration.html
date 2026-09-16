@@ -449,6 +449,41 @@ effect is one call:</p>
 <span>  <span class="co"># each zone gets its own LSD.</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit_z</span>, <span class="st">"treat"</span>, by <span class="op">=</span> <span class="st">"zone"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="zoning-from-covariates-instead-when-you-have-them">Zoning from covariates instead, when you have them<a class="anchor" aria-label="anchor" href="#zoning-from-covariates-instead-when-you-have-them"></a>
+</h3>
+<p><code><a href="../reference/partition_pseudo_env.html">partition_pseudo_env()</a></code> works from the response and cuts
+across the trial, so every treatment stays in every zone. When the zones
+should instead come from what is known before harvest – elevation, an
+EM38 or gamma survey, a soil test grid – and may be any shape,
+<code><a href="../reference/partition_paddock.html">partition_paddock()</a></code> clusters those covariates directly.
+Here is a synthetic elevation and soil layer over the same grid:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">kr</span><span class="op">$</span><span class="va">elevation</span> <span class="op">&lt;-</span> <span class="fl">100</span> <span class="op">+</span> <span class="fl">4</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="op">(</span><span class="op">(</span><span class="va">kr</span><span class="op">$</span><span class="va">y_centre</span> <span class="op">-</span> <span class="fl">30</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">/</span> <span class="fl">400</span><span class="op">)</span></span>
+<span><span class="va">kr</span><span class="op">$</span><span class="va">clay</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">kr</span><span class="op">$</span><span class="va">x_centre</span> <span class="op">&gt;</span> <span class="fl">120</span>, <span class="fl">20</span>, <span class="fl">32</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">kr</span><span class="op">$</span><span class="va">elevation</span> <span class="op">&lt;-</span> <span class="va">kr</span><span class="op">$</span><span class="va">elevation</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">kr</span><span class="op">)</span>, <span class="fl">0</span>, <span class="fl">0.2</span><span class="op">)</span></span>
+<span><span class="va">kr</span><span class="op">$</span><span class="va">clay</span> <span class="op">&lt;-</span> <span class="va">kr</span><span class="op">$</span><span class="va">clay</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">kr</span><span class="op">)</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">pz</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/partition_paddock.html">partition_paddock</a></span><span class="op">(</span><span class="va">kr</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"elevation"</span>, <span class="st">"clay"</span><span class="op">)</span>,</span>
+<span>                        treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">pz</span>, <span class="st">"partition"</span><span class="op">)</span><span class="op">$</span><span class="va">zones</span></span>
+<span><span class="co">#&gt;   zone  n area patches elevation     clay treatments</span></span>
+<span><span class="co">#&gt; 1    1 98 7938       1  100.2157 19.77029          3</span></span>
+<span><span class="co">#&gt; 2    2 91 7371       1  100.2412 32.04948          3</span></span>
+<span><span class="co">#&gt; 3    3 65 5265       1  102.7631 32.05240          3</span></span>
+<span><span class="co">#&gt; 4    4 70 5670       1  102.7665 20.09846          3</span></span></code></pre></div>
+<p><code>patches</code> is the number of connected pieces each zone is
+in, and it is 1 for every zone: that is the guarantee the method buys.
+Clustering the same covariates with k-means gives the same broad regions
+in scattered fragments, which is why it is not the default – compare for
+yourself with <code>method = "kmeans"</code>.</p>
+<p>The <code>treatments</code> column counts the treatment levels
+present in each zone. Zones of arbitrary shape will often fail to
+contain every treatment, which is exactly when
+<code><a href="../reference/partition_pseudo_env.html">partition_pseudo_env()</a></code> is the right tool instead: a zone
+that does not see all the treatments cannot support a
+<code>zone:treat</code> term.</p>
 <p>Two cautions. Zones found this way are a description of where the
 paddock differs, not proof of a boundary — a smooth field with no step
 in it is still split more often than not. And because the cuts were
@@ -457,6 +492,7 @@ interaction estimated on self-derived zones is exploratory: use the
 zones freely for the residual structure, and confirm an interaction
 against an independent layer (elevation, EM38, last season’s yield) by
 passing that layer as <code>response</code> instead.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="when-integration-is-not-worth-it">When integration is not worth it<a class="anchor" aria-label="anchor" href="#when-integration-is-not-worth-it"></a>
