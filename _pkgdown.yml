@@ -61,10 +61,12 @@ reference:
 
 - title: Finding pseudo-environments
   desc: >
-    Cutting the trial into zones the spatial covariance can actually support,
-    and writing the residual structure that follows from them.
+    Cutting the trial into zones — across its length from the yield pattern, or
+    into contiguous regions from elevation and soil — and writing the residual
+    structure that follows from them.
   contents:
   - partition_pseudo_env
+  - partition_paddock
   - adaptive_residual
 
 - title: Estimating the treatment effect

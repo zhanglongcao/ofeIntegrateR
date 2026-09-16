@@ -28,6 +28,7 @@ is used where licensed, but nothing here requires a commercial licence.
 | Interpolate the sparse layer onto that lattice | `krige_point_samples()` |
 | Check the point layer is dense enough to be worth using | `cv_krige_surface()` |
 | Find the pseudo-environments the spatial covariance supports | `partition_pseudo_env()` |
+| Zone a paddock into contiguous regions from elevation and soil | `partition_paddock()` |
 | Write the residual structure those zones imply | `adaptive_residual()` |
 | Fit the spatial mixed model by REML, no licence needed | `fit_ofe()` |
 | Test the fixed terms, and get predicted treatment means | `wald_tests()`, `ofe_means()` |
@@ -156,6 +157,57 @@ deep, and asking for `ar1()` there gives an unidentifiable parameter and a
 failed fit. Each zone gets `ar1()` only where it has extent, and `id()`
 elsewhere. The formula it writes is plain text that both `fit_ofe()` and
 `asreml::asreml()` accept.
+
+### Zoning from elevation and soil instead of yield
+
+`partition_pseudo_env()` cuts across the trial, which is what a strip trial
+wants, and it works from the response. When the zones should come from what is
+known *before* harvest — elevation, an EM38 or gamma survey, a soil test grid —
+and may be any shape, use `partition_paddock()`:
+
+```r
+z <- partition_paddock(g, covariates = c("elevation", "ec_shallow", "clay"))
+attr(z, "partition")$zones   # cells, area, patches, covariate means per zone
+attr(z, "partition")$table   # ssd, r2, marginal gain and CH at each k
+```
+
+**Zones are contiguous by construction.** This is the point. Clustering cells
+on their covariates alone puts a cell in the zone its soil resembles wherever
+it happens to sit, so k-means hands back confetti — no machine can drive it and
+no sampling plan can stratify by it. `partition_paddock()` instead builds a
+minimum spanning tree over the neighbourhood graph, edges weighted by distance
+in standardised covariate space, and prunes it one edge at a time, always
+cutting where most within-zone variance disappears. Every zone is a subtree, so
+every zone is connected. The method is SKATER (Assunção et al. 2006). On the
+same ridge-and-sandy-corner paddock at k = 4:
+
+```
+ skater                  kmeans
+ 222222222222111111      111111111111222222
+ 222222222222111111      111111111111222222
+ 222222222233111111      131111313133222222   <- zone 3 in two pieces,
+ 222222223333111111      333333333333222222      speckled through zone 1
+ 222222333333333333      333333333333333333
+ 444422233333333333      313111111113131333
+ 444422222333333333      111111111111111111
+```
+
+`patches` in the zone summary counts the connected pieces of each zone: 1 for
+every skater zone, more than 1 whenever k-means fragments. `method = "kmeans"`
+is kept so the comparison can be made on your own paddock.
+
+Leave `k` unset and zones are added while each one earns its keep — the default
+stops at the first `k` whose successor would explain less than 5% more of the
+covariate variance (`min_gain`). A paddock uniform in its covariates comes back
+as one zone rather than being carved up anyway. `criterion = "ch"`
+(Calinski–Harabasz) is available, with the caveat in `?partition_paddock` that
+on a smoothly varying covariate it often has no interior maximum and just picks
+`k_max`.
+
+Pass `treat` and each zone's treatment coverage is reported, with a warning if
+a zone is missing a level — a zone that does not contain every treatment cannot
+support a `zone:treat` term, and that is better found here than in a rank
+deficiency later.
 
 Two cautions, both in `?partition_pseudo_env`. A smooth field with no step at
 all will still be split about two-thirds of the time under the defaults, so

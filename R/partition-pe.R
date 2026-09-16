@@ -25,7 +25,36 @@
   }, numeric(1))
   if (!all(is.finite(gamma)) || stats::var(gamma) == 0) return(spacing)
 
-  a_grid <- exp(seq(log(0.25), log(h_max), length.out = 150))
+  a <- .fit_exp_variogram(h, gamma, n_pair)
+  if (is.na(a)) return(spacing)
+
+  # Practical range of an exponential variogram: the lag at which the
+  # correlation has decayed to 0.05. Capped at half the trial, because a range
+  # wider than that is a statement that there is nothing to partition -- and
+  # because a strong step in the profile inflates the variogram without ever
+  # reaching a sill, which would otherwise read as an infinite range.
+  min(3 * a * spacing, extent / 2)
+}
+
+#' Range parameter of an exponential variogram, by constrained grid search
+#'
+#' The nugget and partial sill enter linearly once the range is fixed, so the
+#' search is one-dimensional. Both are constrained non-negative: unconstrained,
+#' the fit will buy an arbitrarily small range with a negative nugget and the
+#' estimate collapses. Lags are weighted by their pair count so the noisy long
+#' lags do not dominate.
+#'
+#' @param h Numeric vector of lags.
+#' @param gamma Numeric vector of empirical semivariances at those lags.
+#' @param n_pair Numeric vector of pair counts.
+#' @return The fitted range parameter, or `NA_real_` if nothing fits.
+#' @keywords internal
+#' @noRd
+.fit_exp_variogram <- function(h, gamma, n_pair) {
+  keep <- is.finite(h) & is.finite(gamma) & is.finite(n_pair) & n_pair > 0
+  h <- h[keep]; gamma <- gamma[keep]; n_pair <- n_pair[keep]
+  if (length(h) < 3L || stats::var(gamma) == 0) return(NA_real_)
+  a_grid <- exp(seq(log(0.25 * min(h)), log(max(h)), length.out = 150))
   ss <- vapply(a_grid, function(a) {
     b <- 1 - exp(-h / a)
     X <- cbind(1, b)
@@ -40,14 +69,8 @@
     }
     sum(n_pair * (gamma - (cf[1] + cf[2] * b))^2)
   }, numeric(1))
-  if (all(!is.finite(ss))) return(spacing)
-
-  # Practical range of an exponential variogram: the lag at which the
-  # correlation has decayed to 0.05. Capped at half the trial, because a range
-  # wider than that is a statement that there is nothing to partition -- and
-  # because a strong step in the profile inflates the variogram without ever
-  # reaching a sill, which would otherwise read as an infinite range.
-  min(3 * a_grid[which.min(ss)] * spacing, extent / 2)
+  if (all(!is.finite(ss))) return(NA_real_)
+  a_grid[which.min(ss)]
 }
 
 #' Optimal contiguous segmentation of a profile

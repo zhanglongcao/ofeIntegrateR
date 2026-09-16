@@ -63,6 +63,29 @@ First release.
   full -- the fitted range, the breaks, the BIC table and the profile -- so the
   answer can be argued with rather than merely accepted.
 
+* `partition_paddock()` zones a paddock into contiguous pseudo-environments
+  from environmental covariates -- elevation, EM38 or gamma survey, soil test
+  grids -- rather than from the yield being analysed. Contiguity is the
+  requirement that rules out k-means: clustering cells on their covariates
+  alone assigns each cell to the zone its soil resembles wherever it sits, so
+  zones come back as confetti that no machine can drive and no sampling plan
+  can stratify by. The default builds a minimum spanning tree over the
+  neighbourhood graph, edges weighted by distance in standardised covariate
+  space, and prunes it one edge at a time where most within-zone variance
+  disappears; every zone is a subtree of a connected graph and so is connected
+  by construction (SKATER, Assuncao et al. 2006). `method = "kmeans"` is kept
+  for comparison, and the `patches` column of the zone summary counts the
+  connected pieces of each zone so the difference can be seen rather than
+  taken on trust.
+
+  With `k` unset, zones are added while each earns its keep: the default stops
+  at the first `k` whose successor would explain less than `min_gain` (5%) more
+  of the covariate variance, and a paddock uniform in its covariates comes back
+  as one zone. The Calinski-Harabasz criterion is available, documented with
+  the caveat that on a smoothly varying covariate it usually has no interior
+  maximum and simply picks `k_max`. Passing `treat` reports each zone's
+  treatment coverage and warns where a zone cannot support a `zone:treat` term.
+
 * `adaptive_residual()` writes the `dsum()` residual formula a set of zones
   implies, giving each zone `ar1()` only in the dimensions where it has extent
   and `id()` elsewhere. Without this, a zone one row deep asks for an

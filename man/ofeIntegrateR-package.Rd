@@ -50,11 +50,16 @@ comparisons from any other source.
 
 \section{Pseudo-environments}{
 
-\code{\link[=partition_pseudo_env]{partition_pseudo_env()}} derives contiguous zones from the spatial pattern
-of the dense layer, using the fitted correlation range to stop the
-partition running past the scale the data can support, and
-\code{\link[=adaptive_residual]{adaptive_residual()}} writes the matching \code{dsum()} residual formula --
-demoting \code{ar1()} to \code{id()} in any zone that lacks the extent to support it.
+Two ways to find them, for two different questions.
+\code{\link[=partition_pseudo_env]{partition_pseudo_env()}} slices a strip trial across its length from the
+pattern in the dense layer, using the fitted correlation range to stop the
+partition running past the scale the data can support; every treatment stays
+in every zone. \code{\link[=partition_paddock]{partition_paddock()}} clusters environmental covariates --
+elevation, EM38, soil tests -- into contiguous regions of any shape, using a
+minimum spanning tree so that a zone cannot come back as scattered cells the
+way k-means leaves it. \code{\link[=adaptive_residual]{adaptive_residual()}} writes the matching \code{dsum()}
+residual formula for either, demoting \code{ar1()} to \code{id()} in any zone that
+lacks the extent to support it.
 }
 
 \section{Integrate a point-source layer}{
