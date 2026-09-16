@@ -16,9 +16,12 @@
 #' @param coords Character vector of length 2 giving the coordinate column
 #'   names present in both `point_data` and `newdata`.
 #' @param vgm_start A variogram model object from [gstat::vgm()] giving
-#'   starting values for [gstat::fit.variogram()]. Defaults to an
-#'   exponential model with psill = 1, range = `max(spatial extent) / 4`,
-#'   nugget = 0.1.
+#'   starting values for [gstat::fit.variogram()]. Defaults to the constrained
+#'   fit from [ofe_variogram()], which cannot fail to converge: given the range
+#'   it solves for nugget and sill in closed form and searches the range on a
+#'   grid. `gstat::fit.variogram()` then refines it where it can; where it
+#'   cannot, that fit is used unchanged and `attr(, "variogram_source")` on the
+#'   result says so.
 #' @param nmax Maximum number of nearest observations used for each
 #'   kriging prediction (passed to [gstat::krige()]).
 #'
@@ -48,10 +51,28 @@ krige_point_samples <- function(point_data,
   }
 
   if (is.null(vgm_start)) {
-    extent <- max(diff(range(point_data[[coords[1]]])),
-                  diff(range(point_data[[coords[2]]])))
-    vgm_start <- gstat::vgm(psill = stats::var(point_data[[value]], na.rm = TRUE),
-                             model = "Exp", range = extent / 4, nugget = 0.1)
+    # Start from the package's own constrained fit. The previous defaults were
+    # a fixed nugget of 0.1 whatever the variable's scale, which for anything
+    # measured in hundreds (brightness, EC) is effectively zero, and gstat's
+    # weighted least squares would wander for 200 iterations and give up.
+    # ofe_variogram() cannot fail to converge: given the range it solves for
+    # the nugget and sill in closed form and searches the range on a grid.
+    v0 <- tryCatch(
+      ofe_variogram(point_data, value = value, x = coords[1], y = coords[2]),
+      error = function(e) NULL)
+    vgm_start <- if (!is.null(v0)) {
+      gstat::vgm(psill = v0$psill, nugget = v0$nugget, range = v0$range,
+                 model = switch(v0$model, exponential = "Exp",
+                                spherical = "Sph", gaussian = "Gau", "Exp"))
+    } else {
+      # Too few samples for a variogram at all; fall back to scale-aware
+      # heuristics rather than to a constant.
+      vv <- stats::var(point_data[[value]], na.rm = TRUE)
+      extent <- max(diff(range(point_data[[coords[1]]])),
+                    diff(range(point_data[[coords[2]]])))
+      gstat::vgm(psill = 0.9 * vv, model = "Exp", range = extent / 4,
+                 nugget = 0.1 * vv)
+    }
   }
 
   coord_formula <- stats::as.formula(paste("~", coords[1], "+", coords[2]))
@@ -60,14 +81,36 @@ krige_point_samples <- function(point_data,
 
   value_formula <- stats::as.formula(paste(value, "~ 1"))
   vgm_emp <- gstat::variogram(value_formula, point_sp)
-  vgm_fit <- tryCatch(
-    gstat::fit.variogram(vgm_emp, vgm_start),
-    error = function(e) {
-      warning("Variogram fitting failed (", conditionMessage(e),
-              "); falling back to starting values.", call. = FALSE)
-      vgm_start
+  # gstat's fit refines the starting values; when it cannot, the starting
+  # values are themselves a fitted model now, so falling back to them is a
+  # substitution rather than a degradation and does not warrant a warning.
+  # Muffling the warning is not enough: fit.variogram still returns its
+  # non-converged iterate, so the substitution has to be made explicitly or
+  # the message would claim a fallback that never happened.
+  converged <- TRUE
+  vgm_fit <- withCallingHandlers(
+    tryCatch(
+      gstat::fit.variogram(vgm_emp, vgm_start),
+      error = function(e) {
+        converged <<- FALSE
+        vgm_start
+      }
+    ),
+    warning = function(w) {
+      if (grepl("No convergence", conditionMessage(w), fixed = TRUE)) {
+        converged <<- FALSE
+        invokeRestart("muffleWarning")
+      }
     }
   )
+  # Silent by design. The starting values are a fitted model, not a guess, so
+  # gstat declining to refine them is an implementation detail rather than
+  # something wrong -- and on small point sets it declines often enough that a
+  # message on every call would be noise. Which fit was used is recorded on the
+  # result instead, so it stays inspectable.
+  refined <- converged && all(is.finite(vgm_fit$psill)) &&
+    all(vgm_fit$psill >= 0)
+  if (!refined) vgm_fit <- vgm_start
 
   newdata_sp <- newdata
   sp::coordinates(newdata_sp) <- coord_formula
@@ -79,5 +122,7 @@ krige_point_samples <- function(point_data,
   out[[paste0(value, "_kriged")]] <- krige_out$var1.pred
   out[[paste0(value, "_kriged_var")]] <- krige_out$var1.var
   attr(out, "variogram") <- vgm_fit
+  attr(out, "variogram_source") <- if (refined) "gstat::fit.variogram" else
+    "ofeIntegrateR constrained fit"
   out
 }

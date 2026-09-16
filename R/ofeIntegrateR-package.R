@@ -31,11 +31,12 @@
 #' ever resolve.
 #'
 #' @section Analyse:
-#' [fit_ofe()] fits a spatial mixed model by REML with ASReml-style residual
+#' [fit_ofe()] fits a spatial mixed model by REML with separable residual
 #' structures -- `ar1()`, `id()`, `exp()`, `diag()`, and `dsum()` sections --
-#' in base R. [wald_tests()] and [ofe_means()] are the analogues of
-#' `wald.asreml()` and `predict.asreml()`. On the structures both support it
-#' agrees with `asreml::asreml()` to several significant figures.
+#' in base R. [wald_tests()] tests each fixed term as a whole and [ofe_means()]
+#' gives predicted means and contrasts. The residual spellings follow ASReml-R,
+#' and on the structures both support the estimates agree to several
+#' significant figures, so a script written against either runs on the other.
 #'
 #' @section Report the means:
 #' [ofe_lsd()] gives the predicted means with their least significant

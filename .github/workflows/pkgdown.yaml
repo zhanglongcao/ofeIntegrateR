@@ -1,10 +1,23 @@
 # Build the documentation site and publish it to GitHub Pages.
 # Derived from https://github.com/r-lib/actions/tree/v2/examples
+# PAUSED while the repository is private, along with R-CMD-check.yaml.
+#
+# Cheaper than the check (one Ubuntu job, about six billed minutes a push)
+# but not free, and Actions minutes are billed only for private repositories.
+# Public repositories get unlimited free minutes, so this costs nothing once
+# the repository is public.
+#
+# While it is paused the documentation site at
+# https://www.zcao.space/ofeIntegrateR/ stays at whatever version last
+# deployed, so it will be behind the code until this is turned back on.
+#
+# TO RESTORE: uncomment the two triggers below. Do the same in
+# R-CMD-check.yaml and put its badge back in README.md.
 on:
-  push:
-    branches: [main, master]
-  release:
-    types: [published]
+  # push:
+  #   branches: [main, master]
+  # release:
+  #   types: [published]
   workflow_dispatch:
 
 name: pkgdown.yaml

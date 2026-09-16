@@ -28,9 +28,12 @@ observed point-source value.}
 names present in both \code{point_data} and \code{newdata}.}
 
 \item{vgm_start}{A variogram model object from \code{\link[gstat:vgm]{gstat::vgm()}} giving
-starting values for \code{\link[gstat:fit.variogram]{gstat::fit.variogram()}}. Defaults to an
-exponential model with psill = 1, range = \verb{max(spatial extent) / 4},
-nugget = 0.1.}
+starting values for \code{\link[gstat:fit.variogram]{gstat::fit.variogram()}}. Defaults to the constrained
+fit from \code{\link[=ofe_variogram]{ofe_variogram()}}, which cannot fail to converge: given the range
+it solves for nugget and sill in closed form and searches the range on a
+grid. \code{gstat::fit.variogram()} then refines it where it can; where it
+cannot, that fit is used unchanged and \code{attr(, "variogram_source")} on the
+result says so.}
 
 \item{nmax}{Maximum number of nearest observations used for each
 kriging prediction (passed to \code{\link[gstat:krige]{gstat::krige()}}).}

@@ -135,7 +135,7 @@ that it is *relevant to yield*.
 
 ```{r}
 cmp <- compare_integration(kr, response = "yield", treat = "nf",
-                           covariate = "bv_obs_kriged", engine = "gls")
+                           covariate = "bv_obs_kriged")
 
 cmp[grepl("^nf|bv", cmp$term), ]
 ```
@@ -146,18 +146,39 @@ Two things to read here.
 N5 — a textbook response curve, recovered from irregular yield-monitor data that
 started as a GPS point cloud.
 
-**Integration changed almost nothing.** The treatment estimates barely move and
-`se_change` is negligible. On this trial, adding a forty-point brightness surface
-did not improve the treatment estimates, even though the surface itself was
-adequately estimated.
+**Integration bought a real gain.** `se_change` is negative throughout, worth
+between 6 and 11 per cent of the standard error. On this trial the forty-point
+brightness surface did improve the treatment estimates.
 
-That is not a failure of the method; it is the method working as intended. The
-dense yield layer, averaged over several observations per cell and spread across
-hundreds of cells, already estimates these contrasts well. A covariate has to
-earn its place against that, and here it did not. Simulation work behind this
-package found the same pattern whenever the baseline is strong — which is why
-`compare_integration()` reports both models rather than the integrated one
-alone.
+## The baseline is only as strong as the model you give it
+
+That second conclusion depends on which residual structure the comparison was
+run under, and it is worth seeing why. Fit the same baseline — no covariate —
+with the exponential-correlation engine instead, and compare the standard
+errors it reports:
+
+```{r}
+base_gls <- fit_integrated_kriged(kr, response = "yield", treat = "nf",
+                                  covariate = NULL, engine = "gls")
+se <- data.frame(
+  ar1 = cmp$baseline_se[grepl("^nf", cmp$term)],
+  gls = extract_fixed_effects(base_gls)$se[-1]
+)
+round(cbind(se, ratio = se$gls / se$ar1), 3)
+```
+
+The exponential fit reports standard errors around half the size. On this
+irregular, gappy lattice it does not absorb as much of the spatial structure,
+so what it fails to model stays in the fit as apparent precision. Run
+`compare_integration()` under that baseline and integration looks worthless —
+not because the covariate stopped helping, but because an over-confident
+baseline leaves nothing visible to improve on.
+
+The lesson is not that one engine is right and the other wrong, but that
+"integration did not help" is a claim about a *pair* of models. Before
+concluding a covariate was not worth collecting, check that the baseline it was
+judged against was itself well specified — `plot()` on the baseline fit, and its
+residual variogram in particular, is the quickest way to see whether it was.
 
 ## What to take from this
 
@@ -166,3 +187,5 @@ alone.
   Their trade-off is specific to your trial's plot geometry.
 - Expect integration to help when the baseline is weak, and to do little when it
   is already strong. Report both so the difference is visible.
+- "Integration did not help" is a statement about two models, not one. Check the
+  baseline is well specified before believing it.

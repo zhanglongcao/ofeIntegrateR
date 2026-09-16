@@ -7,10 +7,9 @@ home:
   title: Design, sample and analyse on-farm strip experiments
   description: >
     A workflow for OFE strip trials: lay out the design, plan the sampling,
-    grid the yield-monitor data, find the pseudo-environments, and fit the
-    spatial mixed model — optionally integrating sparse soil or tissue samples
-    with the dense layer. Every step has an open-source path, including an
-    ASReml-equivalent REML engine written in base R.
+    grid the yield-monitor data, find the zones, fit the spatial mixed model
+    and report the means — optionally integrating sparse soil or tissue samples
+    with the dense layer. Runs on open-source dependencies alone.
 
 reference:
 - title: Designing the trial

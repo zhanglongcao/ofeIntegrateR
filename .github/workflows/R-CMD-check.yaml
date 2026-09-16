@@ -1,9 +1,23 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+# PAUSED while the repository is private.
+#
+# Actions minutes are billed only for private repositories, and this workflow
+# is the expensive one: five platforms per push, with macOS billed at ten times
+# its wall-clock minutes and Windows at twice. One push cost roughly 95 billed
+# minutes out of the monthly allowance, which is what exhausted it.
+#
+# Public repositories get unlimited free minutes on standard runners, so this
+# becomes free the moment the repository is made public. TO RESTORE: delete the
+# `workflow_dispatch` line below, uncomment the two triggers, and put the
+# R-CMD-check badge back at the top of README.md.
+#
+# Until then the workflow can still be started by hand from the Actions tab.
 on:
-  push:
-    branches: [main, master]
-  pull_request:
+  # push:
+  #   branches: [main, master]
+  # pull_request:
+  workflow_dispatch:
 
 name: R-CMD-check.yaml
 

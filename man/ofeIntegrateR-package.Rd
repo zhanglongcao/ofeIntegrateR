@@ -46,11 +46,12 @@ ever resolve.
 
 \section{Analyse}{
 
-\code{\link[=fit_ofe]{fit_ofe()}} fits a spatial mixed model by REML with ASReml-style residual
+\code{\link[=fit_ofe]{fit_ofe()}} fits a spatial mixed model by REML with separable residual
 structures -- \code{ar1()}, \code{id()}, \code{exp()}, \code{diag()}, and \code{dsum()} sections --
-in base R. \code{\link[=wald_tests]{wald_tests()}} and \code{\link[=ofe_means]{ofe_means()}} are the analogues of
-\code{wald.asreml()} and \code{predict.asreml()}. On the structures both support it
-agrees with \code{asreml::asreml()} to several significant figures.
+in base R. \code{\link[=wald_tests]{wald_tests()}} tests each fixed term as a whole and \code{\link[=ofe_means]{ofe_means()}}
+gives predicted means and contrasts. The residual spellings follow ASReml-R,
+and on the structures both support the estimates agree to several
+significant figures, so a script written against either runs on the other.
 }
 
 \section{Report the means}{
