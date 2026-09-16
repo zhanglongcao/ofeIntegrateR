@@ -30,9 +30,8 @@ as_lme_random <- function(random) {
 #' Implements the "kriged-covariate" data integration strategy: a sparse
 #' point-source variable (already kriged onto the trial grid, e.g. via
 #' [krige_point_samples()]) is included as a fixed covariate alongside the
-#' treatment factor, with an AR1xAR1 spatial residual structure (when
-#' `engine = "asreml"`) to absorb any remaining spatial autocorrelation in
-#' the dense response.
+#' treatment factor, with an AR1xAR1 spatial residual structure to absorb any
+#' remaining spatial autocorrelation in the dense response.
 #'
 #' @param data Data frame containing the response, treatment factor, kriged
 #'   covariate, and row/column position columns (one row per grid cell).
@@ -48,9 +47,16 @@ as_lme_random <- function(random) {
 #'   uses only the dense layer and costs no sampling.
 #' @param row,col Character; names of the row/column position columns used
 #'   to build the spatial residual structure. Ignored when `engine = "lm"`.
-#' @param engine Character; `"asreml"` (default) fits
-#'   `response ~ treat + covariate` with an `ar1(row):ar1(col)` residual via
-#'   `asreml::asreml()` — requires a licensed copy of asreml-R. `"lme"` fits
+#'   For a pseudo-environment residual, or any structure other than
+#'   `ar1(row):ar1(col)`, call [fit_ofe()] directly with your own `residual`
+#'   formula.
+#' @param engine Character; `"ofe"` (default) fits
+#'   `response ~ treat + covariate` with an `ar1(row):ar1(col)` residual by
+#'   REML via [fit_ofe()] — the same model asreml fits, written in base R and
+#'   needing no licence. `"asreml"` fits the identical model through
+#'   `asreml::asreml()` where a licence is available; the two agree to several
+#'   significant figures on the structures both support, and asreml is faster
+#'   on large lattices. `"lme"` fits
 #'   random effects **and** an exponential spatial correlation via
 #'   [nlme::lme()], which is the open-source counterpart to the asreml fit for
 #'   a replicated trial. `"gls"` fits
@@ -63,23 +69,25 @@ as_lme_random <- function(random) {
 #'   residual spatial autocorrelation.
 #' @param random Optional one-sided formula of random effects, such as
 #'   `~ rep` or `~ block`. Real strip trials are replicated, so this is usually
-#'   needed. Supported by `engine = "asreml"` and `engine = "lme"`; the `"gls"`
-#'   and `"lm"` engines cannot fit random effects and raise an error rather
-#'   than ignoring the argument.
-#' @param ... Additional arguments passed to `asreml::asreml()` (e.g.
-#'   `maxit`), [nlme::lme()], [nlme::gls()], or [stats::lm()].
+#'   needed. Supported by `engine = "ofe"`, `"asreml"` and `"lme"`; the
+#'   `"gls"` and `"lm"` engines cannot fit random effects and raise an error
+#'   rather than ignoring the argument.
+#' @param ... Additional arguments passed to the engine: [fit_ofe()] (e.g.
+#'   `control = ofe_control(trace = TRUE)`), `asreml::asreml()` (e.g. `maxit`),
+#'   [nlme::lme()], [nlme::gls()], or [stats::lm()].
 #'
-#' @return The fitted model object (class `asreml`, `gls`, or `lm`). Use
+#' @return The fitted model object (class `ofe_fit`, `asreml`, `lme`, `gls`,
+#'   or `lm`). Use
 #'   [extract_fixed_effects()] to retrieve a tidy table of fixed-effect
 #'   estimates, including the treatment contrasts.
 #'
 #' @examples
 #' sim <- simulate_ofe_trial(n_row = 20, n_col = 10, n_point_samples = 12, seed = 1)
 #' krieged <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
-#' fit_lm <- fit_integrated_kriged(krieged, response = "dense_response",
-#'                                  treat = "treat", covariate = "point_obs_kriged",
-#'                                  row = "row", col = "col", engine = "lm")
-#' extract_fixed_effects(fit_lm)
+#' fit <- fit_integrated_kriged(krieged, response = "dense_response",
+#'                               treat = "treat", covariate = "point_obs_kriged",
+#'                               row = "row", col = "col")
+#' extract_fixed_effects(fit)
 #'
 #' if (requireNamespace("asreml", quietly = TRUE)) {
 #'   fit_asr <- fit_integrated_kriged(krieged, response = "dense_response",
@@ -92,13 +100,14 @@ as_lme_random <- function(random) {
 fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
                                    random = NULL,
                                    row = "row", col = "col",
-                                   engine = c("asreml", "lme", "gls", "lm"),
+                                   engine = c("ofe", "asreml", "lme", "gls",
+                                              "lm"),
                                    ...) {
   engine <- match.arg(engine)
   if (!is.null(random) && engine %in% c("gls", "lm")) {
-    stop("`engine = \"", engine, "\"` cannot fit random effects. Use ",
-         "engine = \"lme\" for an open-source fit with both random effects ",
-         "and a spatial correlation structure, or engine = \"asreml\" if ",
+    stop("`engine = \"", engine, "\"` cannot fit random effects. Use the ",
+         "default engine = \"ofe\" for an open-source fit with both random ",
+         "effects and an AR1xAR1 residual, or engine = \"asreml\" if ",
          "licensed.", call. = FALSE)
   }
   needed <- c(response, treat, covariate)
@@ -118,6 +127,12 @@ fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
     paste(treat, "+", paste(covariate, collapse = " + "))
   }
   fixed <- stats::as.formula(paste(response, "~", rhs))
+
+  if (engine == "ofe") {
+    residual <- stats::as.formula(paste0("~ ar1(", row, "):ar1(", col, ")"))
+    return(fit_ofe(fixed, data = data, random = random, residual = residual,
+                   ...))
+  }
 
   if (engine == "lm") {
     return(stats::lm(fixed, data = data, ...))
@@ -179,24 +194,34 @@ fit_integrated_kriged <- function(data, response, treat, covariate = NULL,
 
 #' Extract a tidy table of fixed-effect estimates
 #'
-#' Works for `lm`, `gls`, `lme`, `asreml`, and `mmer` model objects, so the same
-#' downstream code can summarise treatment contrasts regardless of which
-#' `engine` was used in [fit_integrated_kriged()] or [fit_integrated_joint()].
+#' Works for `ofe_fit`, `lm`, `gls`, `lme`, `asreml`, and `mmer` model objects,
+#' so the same downstream code can summarise treatment contrasts regardless of
+#' which `engine` was used in [fit_integrated_kriged()] or
+#' [fit_integrated_joint()].
 #'
-#' @param model A fitted model of class `lm`, `gls`, `asreml`, or `mmer`.
+#' @param model A fitted model of class `ofe_fit`, `lm`, `gls`, `lme`,
+#'   `asreml`, or `mmer`.
 #'
 #' @return A data frame with columns `term`, `estimate`, `se`.
 #'
 #' @examples
 #' sim <- simulate_ofe_trial(n_row = 20, n_col = 10, n_point_samples = 12, seed = 1)
 #' krieged <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
-#' fit_lm <- fit_integrated_kriged(krieged, response = "dense_response",
-#'                                  treat = "treat", covariate = "point_obs_kriged",
-#'                                  row = "row", col = "col", engine = "lm")
-#' extract_fixed_effects(fit_lm)
+#' fit <- fit_integrated_kriged(krieged, response = "dense_response",
+#'                               treat = "treat", covariate = "point_obs_kriged",
+#'                               row = "row", col = "col")
+#' extract_fixed_effects(fit)
 #'
 #' @export
 extract_fixed_effects <- function(model) {
+  if (inherits(model, "ofe_fit")) {
+    return(data.frame(
+      term = names(model$coefficients),
+      estimate = unname(model$coefficients),
+      se = sqrt(diag(model$vcov)),
+      row.names = NULL
+    ))
+  }
   if (inherits(model, "asreml")) {
     cf <- summary(model, coef = TRUE)$coef.fixed
     return(data.frame(
@@ -243,5 +268,6 @@ extract_fixed_effects <- function(model) {
     ))
   }
   stop("Unsupported model class: ", paste(class(model), collapse = "/"),
-       ". Expected 'lm', 'gls', 'asreml', or 'mmer'.", call. = FALSE)
+       ". Expected 'ofe_fit', 'lm', 'gls', 'lme', 'asreml', or 'mmer'.",
+       call. = FALSE)
 }

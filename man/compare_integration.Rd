@@ -11,7 +11,7 @@ compare_integration(
   covariate,
   row = "row",
   col = "col",
-  engine = c("asreml", "gls", "lm"),
+  engine = c("ofe", "asreml", "gls", "lm"),
   ...
 )
 }
@@ -27,7 +27,8 @@ the integrated fit.}
 
 \item{row, col}{Character; position columns used by the spatial residual.}
 
-\item{engine}{Fitting engine, passed to \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}}.}
+\item{engine}{Fitting engine, passed to \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}}.
+Defaults to \code{"ofe"}, which needs no licence.}
 
 \item{...}{Further arguments passed to \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}}.}
 }

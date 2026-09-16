@@ -7,13 +7,15 @@ Description: A workflow for on-farm experimentation (OFE) strip trials,
     from planning a trial to estimating its treatment effects. Lays out strip
     and stacked designs with randomised or systematic treatment order; works
     out how many point samples a target precision needs and where to put them;
-    aggregates irregular yield-monitor data onto an estimable lattice; and
-    estimates treatment effects, optionally integrating a sparse point-source
-    variable (soil cores, tissue tests) with the dense layer by a kriged
-    covariate or a joint bivariate spatial model. Every step has an
-    open-source path requiring no commercial software licence, with ASReml-R
-    used automatically where it is licensed. Developed for the AAGI-CU-RD-OFE
-    GRDC project.
+    aggregates irregular yield-monitor data onto an estimable lattice; derives
+    pseudo-environments from the spatial covariance of the dense layer; and
+    fits spatial mixed models by residual maximum likelihood with separable
+    'ASReml'-style residual structures -- 'ar1()', 'exp()', 'diag()' and
+    'dsum()' sections -- written in base R, so that the analysis needs no
+    commercial licence. Sparse point-source variables (soil cores, tissue
+    tests) can be integrated with the dense layer by a kriged covariate or a
+    joint bivariate spatial model. 'ASReml-R' is used automatically where it
+    is licensed. Developed for the AAGI-CU-RD-OFE GRDC project.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -24,7 +26,8 @@ Imports:
     gstat,
     nlme,
     sp,
-    stats
+    stats,
+    utils
 Suggests:
     agridat,
     asreml,

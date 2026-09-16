@@ -7,9 +7,10 @@ home:
   title: Design, sample and analyse on-farm strip experiments
   description: >
     A workflow for OFE strip trials: lay out the design, plan the sampling,
-    grid the yield-monitor data, and estimate treatment effects — optionally
-    integrating sparse soil or tissue samples with the dense layer. Every step
-    has an open-source path.
+    grid the yield-monitor data, find the pseudo-environments, and fit the
+    spatial mixed model — optionally integrating sparse soil or tissue samples
+    with the dense layer. Every step has an open-source path, including an
+    ASReml-equivalent REML engine written in base R.
 
 reference:
 - title: Designing the trial
@@ -38,6 +39,25 @@ reference:
     Whether the samples are dense enough to reconstruct their own surface.
   contents:
   - cv_krige_surface
+
+- title: Fitting the spatial model
+  desc: >
+    A REML engine with ASReml-style residual structures, written in base R,
+    plus the tests and predicted means that go with it.
+  contents:
+  - fit_ofe
+  - ofe_control
+  - summary.ofe_fit
+  - wald_tests
+  - ofe_means
+
+- title: Finding pseudo-environments
+  desc: >
+    Cutting the trial into zones the spatial covariance can actually support,
+    and writing the residual structure that follows from them.
+  contents:
+  - partition_pseudo_env
+  - adaptive_residual
 
 - title: Estimating the treatment effect
   desc: >

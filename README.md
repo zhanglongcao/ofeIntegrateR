@@ -12,8 +12,10 @@ dense spatial layers (yield maps, EM38 surveys).
 Developed for the AAGI-CU-RD-OFE GRDC project ("Development of processes to
 integrate point-source data and high-resolution data").
 
-**Every step has an open-source path.** ASReml-R is used automatically when
-licensed, but nothing here requires a commercial licence.
+**Every step has an open-source path**, including the analysis: `fit_ofe()` is
+a REML engine with ASReml-style separable residual structures written in base
+R, and it reproduces `asreml::asreml()` to several significant figures. ASReml-R
+is used where licensed, but nothing here requires a commercial licence.
 
 ## The pipeline
 
@@ -25,6 +27,10 @@ licensed, but nothing here requires a commercial licence.
 | Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
 | Interpolate the sparse layer onto that lattice | `krige_point_samples()` |
 | Check the point layer is dense enough to be worth using | `cv_krige_surface()` |
+| Find the pseudo-environments the spatial covariance supports | `partition_pseudo_env()` |
+| Write the residual structure those zones imply | `adaptive_residual()` |
+| Fit the spatial mixed model by REML, no licence needed | `fit_ofe()` |
+| Test the fixed terms, and get predicted treatment means | `wald_tests()`, `ofe_means()` |
 | Fit the baseline and the integrated model, and compare | `compare_integration()` |
 | Fit either model on its own | `fit_integrated_kriged()` |
 | Model both layers jointly instead | `fit_integrated_joint()` |
@@ -43,6 +49,89 @@ Two articles:
   `agridat::lasrosas.corn`, an on-farm nitrogen experiment from Argentina
   recorded by a yield monitor, where the data arrive in the state real data
   arrive in.
+
+## Analysis without asreml
+
+`fit_ofe()` fits a linear mixed model by residual maximum likelihood with a
+separable, ASReml-style residual structure — written in base R, so it installs
+anywhere:
+
+```r
+fit <- fit_ofe(yield ~ treat, random = ~ rep,
+               residual = ~ ar1(row):ar1(col), data = g)
+
+summary(fit)                      # variance parameters + fixed effects
+wald_tests(fit)                   # like wald.asreml(): one test per term
+ofe_means(fit, "treat")           # like predict.asreml(): treatment means
+ofe_means(fit, "treat", pairwise = TRUE)   # contrasts with their SEDs
+```
+
+The `residual` argument takes the asreml spellings, combined with `:` for a
+separable structure:
+
+| Spelling | Meaning |
+|---|---|
+| `id(f)`, or a bare `f` | independent |
+| `ar1(f)` | first-order autoregressive along the ordered levels of `f` |
+| `exp(x)` | exponential correlation in a numeric coordinate |
+| `diag(f)` | a separate variance for each level of `f` |
+| `dsum(~ struct \| s, levels = )` | independent sections, each with its own parameters |
+
+On the structures both support, `fit_ofe()` and `asreml::asreml()` agree to
+several significant figures — variance components, fixed effects and their
+standard errors alike. Where a licence is available, `engine = "asreml"` still
+fits the identical model and is faster on large lattices; the engine here is
+dense, and factorises an n×n matrix at every iteration, so it is meant for
+OFE-sized problems (a few thousand lattice cells — aggregate with
+`grid_dense_layer()` if you have more). It does not implement `us()`/`fa()`
+structures or multi-trait models.
+
+One difference in its favour: cells with a missing response are simply dropped.
+The correlation is evaluated from the row and column positions of whatever
+observations remain, so an incomplete lattice needs no padding — and a row
+absent from the data still counts as a lag rather than being closed up.
+
+## Pseudo-environments, derived rather than guessed
+
+Strip trials are long, and a treatment effect at one end of the paddock need
+not be the effect at the other. `partition_pseudo_env()` cuts the trial into
+contiguous zones from the data: it removes the treatment signal, collapses the
+residual field to a profile along the trial, and segments that profile
+optimally by dynamic programming.
+
+What stops it inventing zones is the spatial covariance. Any smooth field looks
+like it has regions; the question is whether a region is wider than the
+correlation range, because anything narrower is one realisation of the same
+correlated surface rather than a distinct environment. So the practical range
+of a fitted exponential variogram becomes the minimum zone width, and caps the
+number of zones at `floor(trial length / range)`. Within that cap, BIC chooses.
+
+```r
+z <- partition_pseudo_env(g, response = "yield", along = "row", treat = "treat")
+attr(z, "partition")$range      # what set the minimum zone width
+attr(z, "partition")$zones      # where the cuts fell, and how big each zone is
+attr(z, "partition")$bic        # the trade-off it chose from
+
+r <- adaptive_residual(z)       # ~ dsum(~ ar1(row):ar1(col) | zone, levels = ...)
+fit <- fit_ofe(yield ~ zone + zone:treat, data = z, residual = r)
+```
+
+`adaptive_residual()` exists because AR1 needs at least two levels in a
+dimension and real zones do not always have them: a narrow zone may be one row
+deep, and asking for `ar1()` there gives an unidentifiable parameter and a
+failed fit. Each zone gets `ar1()` only where it has extent, and `id()`
+elsewhere. The formula it writes is plain text that both `fit_ofe()` and
+`asreml::asreml()` accept.
+
+Two cautions, both in `?partition_pseudo_env`. A smooth field with no step at
+all will still be split about two-thirds of the time under the defaults, so
+read a zone as "this part of the paddock behaves differently", not as evidence
+of a boundary. And zones derived from the same yield data that then estimate
+zone-specific treatment effects will overstate those differences, because the
+boundaries were placed where the residuals already differed — use them for the
+residual structure freely, and confirm a zone-by-treatment interaction against
+an independent layer (elevation, EM38, a prior season's yield) by passing that
+layer as `response` instead.
 
 ## Two integration strategies
 
@@ -70,28 +159,34 @@ effect. Both `asreml` and `lme` take one, with the same spelling:
 
 | `engine` | Fitted by | Random effects | Spatial residual | Licence |
 |---|---|---|---|---|
+| `"ofe"` (default) | `fit_ofe()` | yes | `ar1(row):ar1(col)` | open source |
 | `"asreml"` | `asreml::asreml()` | yes | `ar1(row):ar1(col)` | commercial |
 | `"lme"` | `nlme::lme()` | yes | exponential + nugget | open source |
 | `"gls"` | `nlme::gls()` | no | exponential + nugget | open source |
 | `"lm"` | `stats::lm()` | no | none | open source |
 
 ```r
-# The same call on either engine
+# The same call on any engine
 fit_integrated_kriged(kr, response = "yield", treat = "treat",
-                      covariate = "soil_n_kriged",
-                      random = ~ rep, engine = "lme")     # or "asreml"
+                      covariate = "soil_n_kriged", random = ~ rep)
 ```
 
-`"lme"` is the open-source counterpart to the asreml fit: random effects *and*
-a spatial correlation structure. `"gls"` has the spatial structure but no
-random effects, and `"lm"` has neither — asking either of them for a random
-effect is an error rather than something silently dropped.
+`"ofe"` is the default because it fits the same `ar1(row):ar1(col)` model
+asreml does and needs no licence. `"asreml"` fits it faster on a large lattice.
+`"lme"` substitutes an exponential correlation for the separable AR1, `"gls"`
+has the correlation but no random effects, and `"lm"` has neither — asking
+either of the last two for a random effect is an error rather than something
+silently dropped.
+
+For a residual structure other than `ar1(row):ar1(col)` — pseudo-environment
+sections, a heterogeneous variance — call `fit_ofe()` directly with your own
+`residual` formula.
 
 For the joint bivariate model, `fit_integrated_joint()` uses
 `asreml::asreml()` or the open-source `sommer::mmer()`.
 
-`extract_fixed_effects()` returns the same tidy table for an `lm`, `gls`,
-`lme`, `asreml` or `mmer` fit, so downstream code does not change when a
+`extract_fixed_effects()` returns the same tidy table for an `ofe_fit`, `lm`,
+`gls`, `lme`, `asreml` or `mmer` fit, so downstream code does not change when a
 licence appears or disappears.
 
 ## Always report the baseline
@@ -115,9 +210,9 @@ remotes::install_github("zhanglongcao/ofeIntegrateR")
 
 Documentation: <https://www.zcao.space/ofeIntegrateR/>
 
-Everything works out of the box with open-source dependencies only
-(`engine = "lm"` / `"gls"` for `fit_integrated_kriged()`, and
-`engine = "sommer"` for `fit_integrated_joint()`). The `engine = "asreml"`
+Everything works out of the box with open-source dependencies only: the
+default `engine = "ofe"` for `fit_integrated_kriged()` and `fit_ofe()`, and
+`engine = "sommer"` for `fit_integrated_joint()`. The `engine = "asreml"`
 options additionally require [asreml-R](https://vsni.co.uk/software/asreml-r),
 a commercial package from VSNi that is **not** installed automatically —
 see VSNi for licensing.
@@ -148,7 +243,12 @@ cv_krige_surface(sim$point_samples, value = "point_obs", coords = c("x", "y"))
 
 # 4. Baseline vs integrated, side by side
 compare_integration(kr, response = "yield", treat = "treat",
-                    covariate = "point_obs_kriged", engine = "gls")
+                    covariate = "point_obs_kriged")
+
+# 5. Or fit the spatial model directly, with the structure you want
+fit <- fit_ofe(yield ~ treat, data = kr, residual = ~ ar1(row):ar1(col))
+wald_tests(fit)
+ofe_means(fit, "treat", pairwise = TRUE)
 ```
 
 ## Notes on asreml-R behaviour

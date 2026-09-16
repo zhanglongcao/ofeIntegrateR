@@ -7,22 +7,24 @@
 extract_fixed_effects(model)
 }
 \arguments{
-\item{model}{A fitted model of class \code{lm}, \code{gls}, \code{asreml}, or \code{mmer}.}
+\item{model}{A fitted model of class \code{ofe_fit}, \code{lm}, \code{gls}, \code{lme},
+\code{asreml}, or \code{mmer}.}
 }
 \value{
 A data frame with columns \code{term}, \code{estimate}, \code{se}.
 }
 \description{
-Works for \code{lm}, \code{gls}, \code{lme}, \code{asreml}, and \code{mmer} model objects, so the same
-downstream code can summarise treatment contrasts regardless of which
-\code{engine} was used in \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}} or \code{\link[=fit_integrated_joint]{fit_integrated_joint()}}.
+Works for \code{ofe_fit}, \code{lm}, \code{gls}, \code{lme}, \code{asreml}, and \code{mmer} model objects,
+so the same downstream code can summarise treatment contrasts regardless of
+which \code{engine} was used in \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}} or
+\code{\link[=fit_integrated_joint]{fit_integrated_joint()}}.
 }
 \examples{
 sim <- simulate_ofe_trial(n_row = 20, n_col = 10, n_point_samples = 12, seed = 1)
 krieged <- krige_point_samples(sim$point_samples, sim$grid, value = "point_obs")
-fit_lm <- fit_integrated_kriged(krieged, response = "dense_response",
-                                 treat = "treat", covariate = "point_obs_kriged",
-                                 row = "row", col = "col", engine = "lm")
-extract_fixed_effects(fit_lm)
+fit <- fit_integrated_kriged(krieged, response = "dense_response",
+                              treat = "treat", covariate = "point_obs_kriged",
+                              row = "row", col = "col")
+extract_fixed_effects(fit)
 
 }

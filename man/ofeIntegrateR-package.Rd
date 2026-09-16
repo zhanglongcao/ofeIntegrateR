@@ -4,36 +4,80 @@
 \name{ofeIntegrateR-package}
 \alias{ofeIntegrateR}
 \alias{ofeIntegrateR-package}
-\title{ofeIntegrateR: Integrate Point-Source and High-Resolution Spatial Data
-in On-Farm Experiments}
+\title{ofeIntegrateR: Design, Sample and Analyse On-Farm Strip Experiments}
 \description{
-Tools for integrating sparse point-source measurements (e.g. soil cores,
-tissue samples, disease ratings) with dense spatial covariates (e.g.
-EM38 surveys, yield maps) in on-farm experimentation (OFE) strip trials.
+A workflow for on-farm experimentation (OFE) strip trials that runs
+end to end without a commercial licence.
 }
-\details{
-Two integration strategies are provided:
+\section{Design the trial}{
+
+\code{\link[=make_trial_design]{make_trial_design()}} lays out treatment plots in replicate blocks, as a
+strip layout or two stacked tiers with a buffer, with randomised or
+systematic treatment order.
+}
+
+\section{Plan the sampling}{
+
+\code{\link[=kriging_sample_interval]{kriging_sample_interval()}} turns a variogram and a target precision into a
+sampling interval and a core count -- and reports the precision floor the
+nugget imposes. \code{\link[=place_point_samples]{place_point_samples()}} chooses the locations.
+}
+
+\section{Prepare the data}{
+
+\code{\link[=grid_dense_layer]{grid_dense_layer()}} snaps an irregular yield-monitor cloud onto the
+complete lattice a separable residual needs. \code{\link[=krige_point_samples]{krige_point_samples()}}
+interpolates the sparse layer onto the same grid, and \code{\link[=cv_krige_surface]{cv_krige_surface()}}
+says whether it was dense enough to be worth it.
+}
+
+\section{Analyse}{
+
+\code{\link[=fit_ofe]{fit_ofe()}} fits a spatial mixed model by REML with ASReml-style residual
+structures -- \code{ar1()}, \code{id()}, \code{exp()}, \code{diag()}, and \code{dsum()} sections --
+in base R. \code{\link[=wald_tests]{wald_tests()}} and \code{\link[=ofe_means]{ofe_means()}} are the analogues of
+\code{wald.asreml()} and \code{predict.asreml()}. On the structures both support it
+agrees with \code{asreml::asreml()} to several significant figures.
+}
+
+\section{Pseudo-environments}{
+
+\code{\link[=partition_pseudo_env]{partition_pseudo_env()}} derives contiguous zones from the spatial pattern
+of the dense layer, using the fitted correlation range to stop the
+partition running past the scale the data can support, and
+\code{\link[=adaptive_residual]{adaptive_residual()}} writes the matching \code{dsum()} residual formula --
+demoting \code{ar1()} to \code{id()} in any zone that lacks the extent to support it.
+}
+
+\section{Integrate a point-source layer}{
+
+Two strategies, each with an open-source path:
 
 \describe{
 \item{Kriged-covariate (\code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}})}{Krige the sparse
-point-source variable onto the trial grid with \code{\link[=krige_point_samples]{krige_point_samples()}},
-then include the kriged surface as a fixed covariate in a spatial
-mixed model of the dense response.}
+variable onto the trial grid, then include the surface as a fixed
+covariate in a spatial mixed model of the dense response. Pass
+\code{covariate = NULL} for the dense-layer-only baseline the integrated fit
+has to beat.}
 \item{Joint bivariate model (\code{\link[=fit_integrated_joint]{fit_integrated_joint()}})}{Fit the dense
 response and the point-source measurements jointly as two stacked
-response layers sharing a spatial random effect, avoiding a separate
-kriging step.}
+layers sharing a spatial random effect, with no separate kriging step.}
 }
 
-\code{\link[=simulate_ofe_trial]{simulate_ofe_trial()}} generates synthetic test data for both strategies,
-and \code{\link[=extract_fixed_effects]{extract_fixed_effects()}} provides a model-agnostic way to retrieve
-fixed-effect (e.g. treatment contrast) estimates from either an \code{lm} or
-an \code{asreml} fit.
+\code{\link[=compare_integration]{compare_integration()}} fits the baseline and the integrated model together,
+and \code{\link[=extract_fixed_effects]{extract_fixed_effects()}} reads contrasts out of any of the fits.
+}
 
-Developed for Milestone 4 of the AAGI-CU-RD-OFE GRDC project
+\section{Simulate}{
+
+\code{\link[=simulate_ofe_trial]{simulate_ofe_trial()}} for a tidy lattice, \code{\link[=simulate_yield_monitor]{simulate_yield_monitor()}} for
+the awkward shape a real harvester produces.
+
+Developed for the AAGI-CU-RD-OFE GRDC project
 (\dQuote{Development of processes to integrate point-source data and
 high-resolution data}).
 }
+
 \seealso{
 Useful links:
 \itemize{

@@ -144,7 +144,7 @@ them up.
 
 ```{r}
 cmp <- compare_integration(kr, response = "yield", treat = "treat",
-                           covariate = "point_obs_kriged", engine = "gls")
+                           covariate = "point_obs_kriged")
 
 cmp[grepl("treat", cmp$term), ]
 ```
@@ -169,22 +169,108 @@ Pass several kriged surfaces and they all enter the model:
 
 ```{r, eval = FALSE}
 fit_integrated_kriged(kr, response = "yield", treat = "treat",
-                      covariate = c("soil_n_kriged", "soil_p_kriged"),
-                      engine = "gls")
+                      covariate = c("soil_n_kriged", "soil_p_kriged"))
 ```
 
 ## Choosing an engine
 
-| `engine` | Spatial residual | Licence |
-|---|---|---|
-| `"asreml"` | `ar1(row):ar1(col)` | commercial |
-| `"gls"` | exponential, via `nlme::gls()` | open source |
-| `"lm"` | none | open source |
+| `engine` | Spatial residual | Random effects | Licence |
+|---|---|---|---|
+| `"ofe"` (default) | `ar1(row):ar1(col)`, via `fit_ofe()` | yes | open source |
+| `"asreml"` | `ar1(row):ar1(col)` | yes | commercial |
+| `"lme"` | exponential, via `nlme::lme()` | yes | open source |
+| `"gls"` | exponential, via `nlme::gls()` | no | open source |
+| `"lm"` | none | no | open source |
 
-`"gls"` is the open-source workhorse. `"lm"` ignores spatial correlation
-entirely and is best kept as a diagnostic reference rather than a final model.
-`extract_fixed_effects()` returns the same tidy table whichever engine fitted the
-model, so downstream code does not change when a licence appears or disappears.
+`"ofe"` is the default: it fits the same separable AR1 model asreml does, in
+base R. `"lm"` ignores spatial correlation entirely and is best kept as a
+diagnostic reference rather than a final model. `extract_fixed_effects()`
+returns the same tidy table whichever engine fitted the model, so downstream
+code does not change when a licence appears or disappears.
+
+## Step 4 — fit the model yourself
+
+`fit_integrated_kriged()` is a convenience wrapper. When you want a residual
+structure of your own, call `fit_ofe()` directly; it takes the asreml
+spellings, so the formula below is the one you would write for
+`asreml::asreml()`.
+
+```{r}
+fit <- fit_ofe(yield ~ treat + point_obs_kriged, data = kr,
+               residual = ~ ar1(row):ar1(col))
+summary(fit)
+```
+
+`wald_tests()` tests each fixed term as a whole — the question a trial report
+asks — rather than one coefficient at a time:
+
+```{r}
+wald_tests(fit)
+```
+
+and `ofe_means()` gives the treatment means, or the contrasts between them with
+the standard error of difference:
+
+```{r}
+ofe_means(fit, "treat")
+ofe_means(fit, "treat", pairwise = TRUE)
+```
+
+## Step 5 — pseudo-environments
+
+A strip runs the length of the paddock, and the treatment effect at one end
+need not be the effect at the other. `partition_pseudo_env()` finds the zones
+from the data: it removes the treatment signal, collapses what is left to a
+profile along the trial, and segments that profile by dynamic programming.
+
+The guard against inventing zones is the spatial covariance. A smooth field
+always looks like it has regions; what matters is whether a region is wider
+than the correlation range, because anything narrower is one realisation of the
+same correlated surface. The practical range of a fitted exponential variogram
+therefore sets the minimum zone width, and caps how many zones are on offer.
+
+```{r}
+z <- partition_pseudo_env(kr, response = "yield", along = "row",
+                          treat = "treat")
+p <- attr(z, "partition")
+c(range = p$range, min_width = p$min_zone_width,
+  most_zones_possible = p$max_zones_possible, chosen = p$n_zones)
+p$zones
+```
+
+On this trial it returns a single zone, which is the right answer: nothing
+zone-like was simulated. The trial is only twelve rows deep and the fitted
+range is about four, so at most three zones were ever on offer, and BIC
+preferred none of them. A function that always found zones would be worse than
+useless.
+
+`adaptive_residual()` then writes the residual structure those zones imply.
+It gives a zone `ar1()` only in the dimensions where it has extent: a zone one
+row deep would otherwise ask for an unidentifiable parameter and fail.
+
+```{r}
+r <- adaptive_residual(z)
+r
+attr(r, "geometry")
+```
+
+If more than one zone was found, fitting a zone-specific treatment effect is
+one call:
+
+```{r}
+if (nlevels(z$zone) > 1) {
+  fit_z <- fit_ofe(yield ~ zone + zone:treat, data = z, residual = r)
+  wald_tests(fit_z)
+}
+```
+
+Two cautions. Zones found this way are a description of where the paddock
+differs, not proof of a boundary — a smooth field with no step in it is still
+split more often than not. And because the cuts were placed where the residuals
+already differed, a zone-by-treatment interaction estimated on self-derived
+zones is exploratory: use the zones freely for the residual structure, and
+confirm an interaction against an independent layer (elevation, EM38, last
+season's yield) by passing that layer as `response` instead.
 
 ## When integration is not worth it
 

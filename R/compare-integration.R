@@ -23,6 +23,7 @@
 #'   the integrated fit.
 #' @param row,col Character; position columns used by the spatial residual.
 #' @param engine Fitting engine, passed to [fit_integrated_kriged()].
+#'   Defaults to `"ofe"`, which needs no licence.
 #' @param ... Further arguments passed to [fit_integrated_kriged()].
 #'
 #' @return A data frame with one row per fixed-effect term, giving the estimate
@@ -42,7 +43,7 @@ compare_integration <- function(data,
                                  covariate,
                                  row = "row",
                                  col = "col",
-                                 engine = c("asreml", "gls", "lm"),
+                                 engine = c("ofe", "asreml", "gls", "lm"),
                                  ...) {
   engine <- match.arg(engine)
   if (length(covariate) == 0L) {
