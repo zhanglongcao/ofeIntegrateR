@@ -171,30 +171,66 @@ attr(z, "partition")$zones   # cells, area, patches, covariate means per zone
 attr(z, "partition")$table   # ssd, r2, marginal gain and CH at each k
 ```
 
-**Zones are contiguous by construction.** This is the point. Clustering cells
-on their covariates alone puts a cell in the zone its soil resembles wherever
-it happens to sit, so k-means hands back confetti — no machine can drive it and
-no sampling plan can stratify by it. `partition_paddock()` instead builds a
-minimum spanning tree over the neighbourhood graph, edges weighted by distance
-in standardised covariate space, and prunes it one edge at a time, always
-cutting where most within-zone variance disappears. Every zone is a subtree, so
-every zone is connected. The method is SKATER (Assunção et al. 2006). On the
-same ridge-and-sandy-corner paddock at k = 4:
+**The shape of a zone is a practical decision**, so there are three methods and
+they differ only in that. Same ridge-and-sandy-corner paddock, k = 4:
 
 ```
- skater                  kmeans
- 222222222222111111      111111111111222222
- 222222222222111111      111111111111222222
- 222222222233111111      131111313133222222   <- zone 3 in two pieces,
- 222222223333111111      333333333333222222      speckled through zone 1
- 222222333333333333      333333333333333333
- 444422233333333333      313111111113131333
- 444422222333333333      111111111111111111
+ rectangle (default)     skater                  kmeans
+ 222222222222111111      222222222222111111      111111111111222222
+ 222222222222111111      222222222222111111      111111111111222222
+ 222222222222111111      222222222233111111      131111313133222222
+ 444444444444444444      222222223333111111      333333333333222222
+ 444444444444444444      222222333333333333      333333333333333333
+ 444444444444444444      444422233333333333      313111111113131333
+ 333333333333333333      444422222333333333      111111111111111111
+ 333333333333333333      222222222222222222      111111111111111111
 ```
 
-`patches` in the zone summary counts the connected pieces of each zone: 1 for
-every skater zone, more than 1 whenever k-means fragments. `method = "kmeans"`
-is kept so the comparison can be made on your own paddock.
+* **`"rectangle"` (default)** — the paddock is cut by lines running the full
+  width or length of the region being split, each placed where it removes most
+  within-zone variance. Cutting a rectangle across leaves two rectangles, so
+  every zone is a rectangle however many cuts are made. This is what a
+  variable-rate prescription, a sampling grid or a set of management blocks
+  wants, and the zone summary gives each block's corners (`x_min`…`y_max`) so
+  it can be marked out. It is the two-dimensional version of what
+  `partition_pseudo_env()` does along one axis.
+* **`"skater"`** — contiguous, but any shape: a minimum spanning tree over the
+  neighbourhood graph, edges weighted by distance in standardised covariate
+  space, pruned one edge at a time. Every zone is a subtree, so every zone is
+  connected — but a zone may send a finger out between two others, as zones 2
+  and 3 do above. Right when the zones are there to describe the soil rather
+  than to be worked, or when a boundary really runs at an angle. Note it does
+  not automatically fit better for being freer: both methods are greedy, and on
+  this paddock the rectangles explain more (r² 0.78 against 0.73). Compare the
+  `r2` column rather than assuming.
+* **`"kmeans"`** — not contiguous at all. Cells go to the zone their soil
+  resembles wherever they sit, so zones arrive as confetti. Kept for
+  comparison; `patches` in the zone summary counts the connected pieces of each
+  zone, which is 1 throughout for the first two methods and more than 1
+  whenever k-means fragments.
+
+What the choice costs depends on the shape of the underlying feature. Variance
+explained at k = 2, on simulated paddocks with one clear feature:
+
+| feature | `"rectangle"` | `"skater"` |
+|---|---|---|
+| block boundaries on the axes | 0.78 | 0.78 |
+| a smooth gradient up the paddock | 0.69 | 0.67 |
+| a boundary running diagonally | 0.25 | **0.98** |
+| a round patch in the middle | 0.13 | **0.97** |
+
+Rectangles cost nothing when the structure is blocky or a gradient, and cost
+almost everything when the boundary runs at an angle or curves — a creek line,
+a dune, a contour. With a feature like that, either use `"skater"` and accept
+the shapes, or raise `k` so rectangles can approximate the boundary in steps.
+
+`covariates` is required and names columns of `data` — there is no default,
+because which layers define a zone is agronomy rather than something the
+function can guess:
+
+```r
+partition_paddock(dat, covariates = c("elevation", "soil"))   # those two columns
+```
 
 Leave `k` unset and zones are added while each one earns its keep — the default
 stops at the first `k` whose successor would explain less than 5% more of the

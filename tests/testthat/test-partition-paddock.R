@@ -20,6 +20,114 @@ two_block <- function(seed = 3, n = 20) {
   g
 }
 
+# Is every zone an axis-aligned rectangle? The definitive check is not the
+# bounding box being the right size -- it is that no cell inside a zone's
+# bounding box belongs to any other zone.
+expect_rectangular <- function(z, xcol = "x", ycol = "y", zone = "zone") {
+  keep <- !is.na(z[[zone]])
+  d <- z[keep, , drop = FALSE]
+  for (lv in levels(droplevels(d[[zone]]))) {
+    inz <- d[[zone]] == lv
+    bx <- range(d[[xcol]][inz])
+    by <- range(d[[ycol]][inz])
+    inbox <- d[[xcol]] >= bx[1] & d[[xcol]] <= bx[2] &
+      d[[ycol]] >= by[1] & d[[ycol]] <= by[2]
+    testthat::expect_true(all(d[[zone]][inbox] == lv),
+                          info = paste("zone", lv, "is not a rectangle"))
+  }
+}
+
+test_that("every rectangle zone really is a rectangle", {
+  # The contract this method exists for, over several fields and several k.
+  for (s in 1:3) {
+    g <- ridge_paddock(seed = s)
+    for (kk in c(2L, 3L, 5L, 7L)) {
+      z <- partition_paddock(g, covariates = c("elevation", "clay"), k = kk)
+      expect_equal(attr(z, "partition")$k, kk)
+      expect_rectangular(z)
+      expect_true(all(attr(z, "partition")$zones$patches == 1L))
+    }
+  }
+})
+
+test_that("rectangle is the default, and skater is free to be irregular", {
+  g <- ridge_paddock()
+  expect_equal(attr(partition_paddock(g, covariates = "elevation"),
+                    "partition")$method, "rectangle")
+  # skater is contiguous but need not be rectangular; on this paddock it is not.
+  sk <- partition_paddock(g, covariates = c("elevation", "clay"), k = 4,
+                          method = "skater")
+  expect_true(all(attr(sk, "partition")$zones$patches == 1L))
+  expect_error(expect_rectangular(sk), "not a rectangle")
+})
+
+test_that("the reported corners are the zone's corners", {
+  g <- ridge_paddock()
+  z <- partition_paddock(g, covariates = c("elevation", "clay"), k = 4)
+  summ <- attr(z, "partition")$zones
+  expect_true(all(c("x_min", "x_max", "y_min", "y_max") %in% names(summ)))
+  for (j in seq_len(nrow(summ))) {
+    v <- which(as.integer(z$zone) == j)
+    expect_equal(summ$x_min[j], min(g$x[v]))
+    expect_equal(summ$x_max[j], max(g$x[v]))
+    expect_equal(summ$y_min[j], min(g$y[v]))
+    expect_equal(summ$y_max[j], max(g$y[v]))
+    # For rectangles the box holds exactly the zone's cells and no others.
+    expect_equal(sum(g$x >= summ$x_min[j] & g$x <= summ$x_max[j] &
+                       g$y >= summ$y_min[j] & g$y <= summ$y_max[j]),
+                 length(v))
+  }
+})
+
+test_that("rectangles are cut across the whole region being split", {
+  # A guillotine partition: at every k, the zones tile the paddock with no
+  # overlap and nothing left over.
+  g <- ridge_paddock()
+  for (kk in 2:6) {
+    z <- partition_paddock(g, covariates = c("elevation", "clay"), k = kk)
+    summ <- attr(z, "partition")$zones
+    expect_equal(sum(summ$n), nrow(g))
+    boxes <- summ[, c("x_min", "x_max", "y_min", "y_max")]
+    for (i in seq_len(nrow(boxes) - 1L)) {
+      for (j in (i + 1L):nrow(boxes)) {
+        overlap <- boxes$x_min[i] <= boxes$x_max[j] &&
+          boxes$x_max[i] >= boxes$x_min[j] &&
+          boxes$y_min[i] <= boxes$y_max[j] &&
+          boxes$y_max[i] >= boxes$y_min[j]
+        expect_false(overlap, info = paste("zones", i, "and", j, "overlap"))
+      }
+    }
+  }
+})
+
+test_that("covariates must be given, as names of columns in data", {
+  g <- ridge_paddock()
+  expect_error(partition_paddock(g), "`covariates` is required")
+  expect_error(partition_paddock(g, covariates = NULL), "`covariates` is required")
+  expect_error(partition_paddock(g, covariates = character(0)),
+               "`covariates` is required")
+  expect_error(partition_paddock(g, covariates = NA), "`covariates` is required")
+  expect_error(partition_paddock(g, covariates = 3), "must be column names")
+  expect_error(partition_paddock(g, covariates = c("elevation", "elevation")),
+               "same column twice")
+  expect_error(partition_paddock(g, covariates = "nope"), "not found in `data`")
+})
+
+test_that("a paddock with a clipped corner still gives block-shaped zones", {
+  set.seed(4)
+  g <- expand.grid(row = 1:20, col = 1:20)
+  g$x <- g$col * 10
+  g$y <- g$row * 10
+  g <- g[!(g$col > 14 & g$row > 14), ]      # corner cut out, as real ones are
+  g$ec <- ifelse(g$x > 100, 60, 40) + stats::rnorm(nrow(g), 0, 2)
+  z <- partition_paddock(g, covariates = "ec", k = 3)
+  expect_equal(attr(z, "partition")$k, 3L)
+  expect_true(all(attr(z, "partition")$zones$patches == 1L))
+  # A zone is a rectangle intersected with the paddock: no cell that exists
+  # inside a zone's box belongs to a different zone.
+  expect_rectangular(z)
+})
+
 test_that("every skater zone is a single connected piece", {
   # The contract this method exists for. Checked on three different fields,
   # and at several k, because contiguity must not depend on the data.
@@ -161,8 +269,6 @@ test_that("treatment coverage is reported and a gap is warned about", {
 
 test_that("input that cannot be zoned is refused with a reason", {
   g <- ridge_paddock()
-  expect_error(partition_paddock(g, covariates = character(0)),
-               "at least one column")
   expect_error(partition_paddock(g, covariates = "nope"), "not found in `data`")
   g$soil_type <- factor("sand")
   expect_error(partition_paddock(g, covariates = "soil_type"), "must be numeric")

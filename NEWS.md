@@ -63,20 +63,34 @@ First release.
   full -- the fitted range, the breaks, the BIC table and the profile -- so the
   answer can be argued with rather than merely accepted.
 
-* `partition_paddock()` zones a paddock into contiguous pseudo-environments
-  from environmental covariates -- elevation, EM38 or gamma survey, soil test
-  grids -- rather than from the yield being analysed. Contiguity is the
-  requirement that rules out k-means: clustering cells on their covariates
-  alone assigns each cell to the zone its soil resembles wherever it sits, so
-  zones come back as confetti that no machine can drive and no sampling plan
-  can stratify by. The default builds a minimum spanning tree over the
-  neighbourhood graph, edges weighted by distance in standardised covariate
-  space, and prunes it one edge at a time where most within-zone variance
-  disappears; every zone is a subtree of a connected graph and so is connected
-  by construction (SKATER, Assuncao et al. 2006). `method = "kmeans"` is kept
-  for comparison, and the `patches` column of the zone summary counts the
-  connected pieces of each zone so the difference can be seen rather than
-  taken on trust.
+* `partition_paddock()` zones a paddock into pseudo-environments from
+  environmental covariates -- elevation, EM38 or gamma survey, soil test
+  grids -- rather than from the yield being analysed. `covariates` names the
+  columns of `data` to zone on and is required: there is no default, because
+  which layers define a zone is agronomy rather than something the function can
+  guess.
+
+  Three methods, differing only in the shape a zone is allowed to be, which is
+  a practical decision rather than a statistical one. `"rectangle"` (the
+  default) cuts the paddock by lines running the full width or length of the
+  region being split, each placed where it removes most within-zone variance;
+  cutting a rectangle across leaves two rectangles, so every zone is a
+  rectangle however many cuts are made, and the zone summary reports each
+  block's corners so it can be marked out. It is the two-dimensional version of
+  what `partition_pseudo_env()` does along one axis. `"skater"` gives
+  contiguous zones of any shape, from a minimum spanning tree over the
+  neighbourhood graph pruned one edge at a time (Assuncao et al. 2006) -- right
+  when a boundary really runs at an angle, at the cost of zones that send
+  fingers out between their neighbours. `"kmeans"` is not contiguous at all and
+  is kept only for comparison: it assigns each cell to the zone its soil
+  resembles wherever the cell sits, so zones arrive as confetti. The `patches`
+  column counts the connected pieces of each zone, so the difference can be
+  seen rather than taken on trust.
+
+  Being freer does not make skater fit better: both it and the rectangle
+  method are greedy, and on the test paddock the rectangles explain more of the
+  covariate variance at the same k (r2 0.78 against 0.73). The `r2` column of
+  the returned table is there to be compared rather than assumed.
 
   With `k` unset, zones are added while each earns its keep: the default stops
   at the first `k` whose successor would explain less than `min_gain` (5%) more

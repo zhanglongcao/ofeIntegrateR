@@ -313,11 +313,15 @@ pz <- partition_paddock(kr, covariates = c("elevation", "clay"),
 attr(pz, "partition")$zones
 ```
 
-`patches` is the number of connected pieces each zone is in, and it is 1 for
-every zone: that is the guarantee the method buys. Clustering the same
-covariates with k-means gives the same broad regions in scattered fragments,
-which is why it is not the default -- compare for yourself with
-`method = "kmeans"`.
+Every zone is a rectangle, and `x_min`...`y_max` are its corners, so a block
+can be marked out in the paddock. That is what the default `method` buys:
+cutting a rectangle all the way across leaves two rectangles, so no number of
+cuts can produce a zone that sends a finger out between its neighbours.
+`method = "skater"` relaxes that to contiguous-but-any-shape, which suits a
+boundary running at an angle; `method = "kmeans"` drops contiguity altogether
+and is worth running once to see why it is not the default. `patches` counts
+the connected pieces of each zone -- 1 throughout here, more than 1 as soon as
+k-means fragments.
 
 The `treatments` column counts the treatment levels present in each zone.
 Zones of arbitrary shape will often fail to contain every treatment, which is

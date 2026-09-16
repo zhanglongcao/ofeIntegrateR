@@ -235,6 +235,61 @@
        cut = c(verts[v], verts[parent[v]]))
 }
 
+#' Best axis-aligned cut of one rectangle
+#'
+#' Considers every horizontal and every vertical line that separates two
+#' adjacent coordinate positions, and returns the one removing most within-zone
+#' variance. Cutting a rectangle all the way across always leaves two
+#' rectangles, so recursing on the result gives rectangular zones however many
+#' times it is applied -- which is the property `method = "skater"` cannot
+#' offer, since a pruned spanning tree is connected but any shape.
+#'
+#' Sums are accumulated once per coordinate line and then cumulated, so each
+#' candidate cut costs O(p) rather than a pass over the cells.
+#' @keywords internal
+#' @noRd
+.best_rect_cut <- function(v, ax, ay, X, min_cells) {
+  Xv <- X[v, , drop = FALSE]
+  N <- length(v)
+  S <- colSums(Xv)
+  Q <- colSums(Xv^2)
+  total <- sum(Q - S^2 / N)
+  best <- NULL
+
+  for (axis in 1:2) {
+    a <- if (axis == 1L) ax[v] else ay[v]
+    ua <- sort(unique(a))
+    if (length(ua) < 2L) next
+    g <- match(a, ua)
+    cn <- cumsum(tabulate(g, nbins = length(ua)))
+    S_g <- rowsum(Xv, g, reorder = TRUE)
+    Q_g <- rowsum(Xv^2, g, reorder = TRUE)
+    cS <- matrix(apply(S_g, 2, cumsum), ncol = ncol(S_g))
+    cQ <- matrix(apply(Q_g, 2, cumsum), ncol = ncol(Q_g))
+
+    j <- seq_len(length(ua) - 1L)
+    n1 <- cn[j]
+    n2 <- N - n1
+    ok <- n1 >= min_cells & n2 >= min_cells
+    if (!any(ok)) next
+    j <- j[ok]; n1 <- n1[ok]; n2 <- n2[ok]
+    S1 <- cS[j, , drop = FALSE]
+    Q1 <- cQ[j, , drop = FALSE]
+    S2 <- rep(S, each = length(j)) - S1
+    Q2 <- rep(Q, each = length(j)) - Q1
+    gain <- total - rowSums(Q1 - S1^2 / n1) - rowSums(Q2 - S2^2 / n2)
+
+    b <- which.max(gain)
+    if (is.null(best) || gain[b] > best$gain) {
+      at <- ua[j[b]]
+      lower <- a <= at
+      best <- list(gain = gain[b], axis = axis, at = at,
+                   part1 = v[lower], part2 = v[!lower])
+    }
+  }
+  best
+}
+
 #' Omnidirectional practical range of a multivariate covariate field
 #' @keywords internal
 #' @noRd
@@ -269,22 +324,62 @@
 #' previous season's imagery -- rather than from the yield being analysed. The
 #' zones are guaranteed to be spatially contiguous.
 #'
-#' # Why not k-means
+#' # Shape of the zones
 #'
-#' Clustering cells on their covariates alone assigns each cell to the zone its
-#' soil resembles, wherever the cell happens to sit, so zones come back as
-#' confetti scattered across the paddock. That is unusable: a machine cannot
-#' drive it, a sampling plan cannot stratify by it, and a strip trial cannot
-#' treat it as a pseudo-environment. `method = "skater"` (the default) instead
-#' builds a minimum spanning tree over the neighbourhood graph -- edges weighted
-#' by distance between cells in standardised covariate space -- and prunes it
-#' one edge at a time, always cutting the edge that removes most within-zone
-#' variance. Every zone is a subtree of a connected graph, so every zone is
-#' connected. The method is SKATER (Assuncao et al. 2006).
+#' Three methods, differing only in what shape a zone is allowed to be. The
+#' choice is a practical one, not a statistical one: a zone has to be something
+#' a machine can drive and a sampling plan can stratify by.
 #'
-#' `method = "kmeans"` runs plain k-means for comparison. It is not contiguous,
-#' and the `patches` column of the zone summary shows how badly: a zone in one
-#' piece has `patches = 1`, and anything more is fragmentation.
+#' \describe{
+#'   \item{`"rectangle"` (default)}{Rectangular blocks. The paddock is cut
+#'     repeatedly by lines running the full width or full length of the region
+#'     being split, each cut placed where it removes most within-zone variance.
+#'     Cutting a rectangle across always leaves two rectangles, so every zone is
+#'     a rectangle however many cuts are made. This is the shape a variable-rate
+#'     prescription, a soil sampling grid or a set of management blocks wants,
+#'     and it is the two-dimensional version of what [partition_pseudo_env()]
+#'     does along a single axis. Where the paddock is not itself a rectangle --
+#'     a clipped corner, a headland left out -- a zone is a rectangle
+#'     intersected with the paddock, which is still a block you can drive.}
+#'   \item{`"skater"`}{Contiguous zones of any shape. A minimum spanning tree
+#'     is built over the neighbourhood graph -- edges weighted by distance
+#'     between cells in standardised covariate space -- and pruned one edge at a
+#'     time, always cutting the edge that removes most within-zone variance.
+#'     Every zone is a subtree of a connected graph, so every zone is connected,
+#'     but a zone may send a finger out between two others. Use it when the
+#'     zones are there to describe the soil faithfully rather than to be
+#'     worked, and when a boundary genuinely runs at an angle or along a
+#'     contour. Being free to follow the boundary does not guarantee it fits
+#'     better: both methods are greedy, and a greedy tree pruning can strand
+#'     itself where a well-placed straight cut would not, so rectangles
+#'     sometimes explain more of the covariate variance at the same `k`.
+#'     Compare the `r2` column of the returned table on your own paddock rather
+#'     than assuming. The method is SKATER (Assuncao et al. 2006).}
+#'   \item{`"kmeans"`}{Plain k-means on the covariates, for comparison. It is
+#'     not contiguous at all: cells are assigned to the zone their soil
+#'     resembles wherever they happen to sit, so zones come back as confetti
+#'     scattered across the paddock. The `patches` column of the zone summary
+#'     counts the connected pieces of each zone -- 1 for every rectangle and
+#'     every skater zone, more than 1 whenever k-means fragments.}
+#' }
+#'
+#' What the choice costs depends entirely on the shape of the underlying
+#' feature. On simulated paddocks with one clear feature in one covariate, the
+#' variance explained at `k = 2` was:
+#'
+#' \tabular{lrr}{
+#'   **feature**                  \tab **rectangle** \tab **skater** \cr
+#'   block boundaries on the axes \tab 0.78 \tab 0.78 \cr
+#'   a smooth gradient up the paddock \tab 0.69 \tab 0.67 \cr
+#'   a boundary running diagonally \tab 0.25 \tab 0.98 \cr
+#'   a round patch in the middle  \tab 0.13 \tab 0.97 \cr
+#' }
+#'
+#' So rectangles cost nothing when the structure is already blocky or a
+#' gradient, and cost almost everything when the boundary runs at an angle or
+#' curves -- a creek line, a dune, a contour. If your covariate map has a
+#' feature like that, either use `"skater"` and accept the awkward shapes, or
+#' raise `k` so rectangles can approximate the boundary in steps.
 #'
 #' # Choosing k
 #'
@@ -325,9 +420,10 @@
 #' cuts across the strips and so keeps every treatment in every zone.
 #'
 #' @param data Data frame, one row per cell (e.g. from [grid_dense_layer()]).
-#' @param covariates Character vector of the covariate columns to cluster on,
-#'   such as `c("elevation", "ec_shallow", "clay")`. Rows missing any of them
-#'   are dropped.
+#' @param covariates Character vector naming the columns of `data` to zone on,
+#'   such as `c("elevation", "clay")`. Required, and there is deliberately no
+#'   default: which layers define a zone is an agronomic decision. All must be
+#'   numeric; rows missing any of them are dropped.
 #' @param k Integer or `NULL`; the number of zones. `NULL` chooses it (see
 #'   above).
 #' @param row,col Character or `NULL`; integer lattice indices, used to build
@@ -335,8 +431,9 @@
 #' @param x,y Character or `NULL`; projected coordinates in metres. Defaults to
 #'   `"x_centre"`/`"y_centre"` when present, else `"x"`/`"y"`. Needed for the
 #'   spatial range and for `neighbours = "knn"`.
-#' @param method `"skater"` (default, contiguous) or `"kmeans"`
-#'   (not contiguous; for comparison).
+#' @param method `"rectangle"` (default) for rectangular blocks,
+#'   `"skater"` for contiguous zones of any shape, or `"kmeans"` for
+#'   unconstrained clustering (not contiguous; for comparison). See above.
 #' @param neighbours `"auto"` (grid neighbourhoods when `row`/`col` are
 #'   available, otherwise nearest neighbours), `"rook"`, `"queen"` or `"knn"`.
 #' @param n_neighbours Integer; neighbours per cell when `neighbours = "knn"`.
@@ -367,8 +464,8 @@
 #'   derivation is attached as `attr(, "partition")`: the `method`, `k`,
 #'   `covariates`, the fitted `range`, the `table` of criteria over k (`ssd`,
 #'   `r2`, the marginal `gain`, and `ch`), and a `zones` summary with each
-#'   zone's cell count, area, number of connected `patches`, covariate means
-#'   and (with `treat`) treatment coverage.
+#'   zone's cell count, area, number of connected `patches`, corner
+#'   coordinates, covariate means and (with `treat`) treatment coverage.
 #'
 #' @references
 #' Assuncao, R.M., Neves, M.C., Camara, G. and da Costa Freitas, C. (2006)
@@ -398,7 +495,7 @@
 #' @export
 partition_paddock <- function(data, covariates, k = NULL,
                               row = NULL, col = NULL, x = NULL, y = NULL,
-                              method = c("skater", "kmeans"),
+                              method = c("rectangle", "skater", "kmeans"),
                               neighbours = c("auto", "rook", "queen", "knn"),
                               n_neighbours = 8L, k_max = 8L,
                               criterion = c("gain", "ch"), min_gain = 0.05,
@@ -409,8 +506,22 @@ partition_paddock <- function(data, covariates, k = NULL,
   criterion <- match.arg(criterion)
   data <- as.data.frame(data)
 
-  if (length(covariates) == 0L) {
-    stop("`covariates` must name at least one column.", call. = FALSE)
+  if (missing(covariates) || is.null(covariates) ||
+      length(covariates) == 0L || all(is.na(covariates))) {
+    stop("`covariates` is required: name the columns of `data` to zone on, ",
+         "e.g. partition_paddock(dat, covariates = c(\"elevation\", ",
+         "\"soil\")). There is no sensible default -- which layers define a ",
+         "zone is the agronomy, not something this function can guess.",
+         call. = FALSE)
+  }
+  if (!is.character(covariates)) {
+    stop("`covariates` must be column names, as character, not ",
+         class(covariates)[1], ".", call. = FALSE)
+  }
+  dup <- unique(covariates[duplicated(covariates)])
+  if (length(dup) > 0L) {
+    stop("`covariates` names the same column twice: ",
+         paste(dup, collapse = ", "), ".", call. = FALSE)
   }
   if (is.null(row) && "row" %in% names(data)) row <- "row"
   if (is.null(col) && "col" %in% names(data)) col <- "col"
@@ -495,7 +606,28 @@ partition_paddock <- function(data, covariates, k = NULL,
   }
 
   ssd_total <- .ssd(seq_len(n), X)
-  if (method == "skater") {
+  if (method == "rectangle") {
+    ax <- match(xy[, 1], sort(unique(xy[, 1])))
+    ay <- match(xy[, 2], sort(unique(xy[, 2])))
+    rects <- list(seq_len(n))
+    seq_ssd <- ssd_total
+    labels_at_k <- list(rep(1L, n))
+    for (step in seq_len(max(k_search, 1L) - 1L)) {
+      cuts <- lapply(rects, function(v) .best_rect_cut(v, ax, ay, X, min_cells))
+      gains <- vapply(cuts, function(z) if (is.null(z)) -Inf else z$gain,
+                      numeric(1))
+      if (all(!is.finite(gains))) break
+      ci <- which.max(gains)
+      cut <- cuts[[ci]]
+      rects[[ci]] <- cut$part1
+      rects[[length(rects) + 1L]] <- cut$part2
+      lab <- integer(n)
+      for (j in seq_along(rects)) lab[rects[[j]]] <- j
+      labels_at_k[[length(labels_at_k) + 1L]] <- lab
+      seq_ssd <- c(seq_ssd,
+                   sum(vapply(rects, function(v) .ssd(v, X), numeric(1))))
+    }
+  } else if (method == "skater") {
     w <- sqrt(rowSums((X[edges[, 1], , drop = FALSE] -
                          X[edges[, 2], , drop = FALSE])^2))
     tree <- .mst(edges, w, n)
@@ -597,6 +729,15 @@ partition_paddock <- function(data, covariates, k = NULL,
                      stringsAsFactors = FALSE)
   summ$area <- summ$n * spacing^2
   summ$patches <- patches
+  # The corners of each zone, so a block can actually be marked out. For
+  # `method = "rectangle"` this is the zone itself; for the others it is the
+  # bounding box of a shape that may not fill it.
+  for (nm in c("x_min", "x_max", "y_min", "y_max")) summ[[nm]] <- NA_real_
+  for (j in seq_len(k_use)) {
+    v <- which(lab == j)
+    summ$x_min[j] <- min(xy[v, 1]); summ$x_max[j] <- max(xy[v, 1])
+    summ$y_min[j] <- min(xy[v, 2]); summ$y_max[j] <- max(xy[v, 2])
+  }
   cov_used <- colnames(X)
   for (cv in covariates) {
     summ[[cv]] <- as.numeric(tapply(data[[cv]][idx_keep], lab, mean))

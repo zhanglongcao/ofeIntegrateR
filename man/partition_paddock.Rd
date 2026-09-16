@@ -12,7 +12,7 @@ partition_paddock(
   col = NULL,
   x = NULL,
   y = NULL,
-  method = c("skater", "kmeans"),
+  method = c("rectangle", "skater", "kmeans"),
   neighbours = c("auto", "rook", "queen", "knn"),
   n_neighbours = 8L,
   k_max = 8L,
@@ -29,9 +29,10 @@ partition_paddock(
 \arguments{
 \item{data}{Data frame, one row per cell (e.g. from \code{\link[=grid_dense_layer]{grid_dense_layer()}}).}
 
-\item{covariates}{Character vector of the covariate columns to cluster on,
-such as \code{c("elevation", "ec_shallow", "clay")}. Rows missing any of them
-are dropped.}
+\item{covariates}{Character vector naming the columns of \code{data} to zone on,
+such as \code{c("elevation", "clay")}. Required, and there is deliberately no
+default: which layers define a zone is an agronomic decision. All must be
+numeric; rows missing any of them are dropped.}
 
 \item{k}{Integer or \code{NULL}; the number of zones. \code{NULL} chooses it (see
 above).}
@@ -43,8 +44,9 @@ the grid neighbourhoods. Defaults to \code{"row"}/\code{"col"} when \code{data} 
 \code{"x_centre"}/\code{"y_centre"} when present, else \code{"x"}/\code{"y"}. Needed for the
 spatial range and for \code{neighbours = "knn"}.}
 
-\item{method}{\code{"skater"} (default, contiguous) or \code{"kmeans"}
-(not contiguous; for comparison).}
+\item{method}{\code{"rectangle"} (default) for rectangular blocks,
+\code{"skater"} for contiguous zones of any shape, or \code{"kmeans"} for
+unconstrained clustering (not contiguous; for comparison). See above.}
 
 \item{neighbours}{\code{"auto"} (grid neighbourhoods when \code{row}/\code{col} are
 available, otherwise nearest neighbours), \code{"rook"}, \code{"queen"} or \code{"knn"}.}
@@ -87,8 +89,8 @@ of each cell; cells dropped for missing covariates get \code{NA}. The
 derivation is attached as \code{attr(, "partition")}: the \code{method}, \code{k},
 \code{covariates}, the fitted \code{range}, the \code{table} of criteria over k (\code{ssd},
 \code{r2}, the marginal \code{gain}, and \code{ch}), and a \code{zones} summary with each
-zone's cell count, area, number of connected \code{patches}, covariate means
-and (with \code{treat}) treatment coverage.
+zone's cell count, area, number of connected \code{patches}, corner
+coordinates, covariate means and (with \code{treat}) treatment coverage.
 }
 \description{
 Divides a paddock into pseudo-environments using covariates that are known
@@ -96,21 +98,61 @@ before harvest -- elevation, EM38 or gamma survey, soil test grids, a
 previous season's imagery -- rather than from the yield being analysed. The
 zones are guaranteed to be spatially contiguous.
 }
-\section{Why not k-means}{
-Clustering cells on their covariates alone assigns each cell to the zone its
-soil resembles, wherever the cell happens to sit, so zones come back as
-confetti scattered across the paddock. That is unusable: a machine cannot
-drive it, a sampling plan cannot stratify by it, and a strip trial cannot
-treat it as a pseudo-environment. \code{method = "skater"} (the default) instead
-builds a minimum spanning tree over the neighbourhood graph -- edges weighted
-by distance between cells in standardised covariate space -- and prunes it
-one edge at a time, always cutting the edge that removes most within-zone
-variance. Every zone is a subtree of a connected graph, so every zone is
-connected. The method is SKATER (Assuncao et al. 2006).
+\section{Shape of the zones}{
+Three methods, differing only in what shape a zone is allowed to be. The
+choice is a practical one, not a statistical one: a zone has to be something
+a machine can drive and a sampling plan can stratify by.
 
-\code{method = "kmeans"} runs plain k-means for comparison. It is not contiguous,
-and the \code{patches} column of the zone summary shows how badly: a zone in one
-piece has \code{patches = 1}, and anything more is fragmentation.
+\describe{
+\item{\code{"rectangle"} (default)}{Rectangular blocks. The paddock is cut
+repeatedly by lines running the full width or full length of the region
+being split, each cut placed where it removes most within-zone variance.
+Cutting a rectangle across always leaves two rectangles, so every zone is
+a rectangle however many cuts are made. This is the shape a variable-rate
+prescription, a soil sampling grid or a set of management blocks wants,
+and it is the two-dimensional version of what \code{\link[=partition_pseudo_env]{partition_pseudo_env()}}
+does along a single axis. Where the paddock is not itself a rectangle --
+a clipped corner, a headland left out -- a zone is a rectangle
+intersected with the paddock, which is still a block you can drive.}
+\item{\code{"skater"}}{Contiguous zones of any shape. A minimum spanning tree
+is built over the neighbourhood graph -- edges weighted by distance
+between cells in standardised covariate space -- and pruned one edge at a
+time, always cutting the edge that removes most within-zone variance.
+Every zone is a subtree of a connected graph, so every zone is connected,
+but a zone may send a finger out between two others. Use it when the
+zones are there to describe the soil faithfully rather than to be
+worked, and when a boundary genuinely runs at an angle or along a
+contour. Being free to follow the boundary does not guarantee it fits
+better: both methods are greedy, and a greedy tree pruning can strand
+itself where a well-placed straight cut would not, so rectangles
+sometimes explain more of the covariate variance at the same \code{k}.
+Compare the \code{r2} column of the returned table on your own paddock rather
+than assuming. The method is SKATER (Assuncao et al. 2006).}
+\item{\code{"kmeans"}}{Plain k-means on the covariates, for comparison. It is
+not contiguous at all: cells are assigned to the zone their soil
+resembles wherever they happen to sit, so zones come back as confetti
+scattered across the paddock. The \code{patches} column of the zone summary
+counts the connected pieces of each zone -- 1 for every rectangle and
+every skater zone, more than 1 whenever k-means fragments.}
+}
+
+What the choice costs depends entirely on the shape of the underlying
+feature. On simulated paddocks with one clear feature in one covariate, the
+variance explained at \code{k = 2} was:
+
+\tabular{lrr}{
+\strong{feature}                  \tab \strong{rectangle} \tab \strong{skater} \cr
+block boundaries on the axes \tab 0.78 \tab 0.78 \cr
+a smooth gradient up the paddock \tab 0.69 \tab 0.67 \cr
+a boundary running diagonally \tab 0.25 \tab 0.98 \cr
+a round patch in the middle  \tab 0.13 \tab 0.97 \cr
+}
+
+So rectangles cost nothing when the structure is already blocky or a
+gradient, and cost almost everything when the boundary runs at an angle or
+curves -- a creek line, a dune, a contour. If your covariate map has a
+feature like that, either use \code{"skater"} and accept the awkward shapes, or
+raise \code{k} so rectangles can approximate the boundary in steps.
 }
 
 \section{Choosing k}{
