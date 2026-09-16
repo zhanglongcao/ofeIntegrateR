@@ -61,8 +61,8 @@ hundreds of metres and useless on one that turns over every ten.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">kriging_sample_interval</span><span class="op">(</span></span>
 <span>  <span class="va">nugget</span>,</span>
-<span>  <span class="va">psill</span>,</span>
-<span>  <span class="va">range</span>,</span>
+<span>  psill <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  range <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  target_kse <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  area_ha <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  model <span class="op">=</span> <span class="st">"Exp"</span>,</span>
@@ -77,7 +77,11 @@ hundreds of metres and useless on one that turns over every ten.</p>
 <dl><dt id="arg-nugget-psill-range">nugget, psill, range<a class="anchor" aria-label="anchor" href="#arg-nugget-psill-range"></a></dt>
 <dd><p>Variogram parameters: nugget \(c_0\), partial
 sill \(c_1\), and practical range, in the units of the trial's
-coordinates (normally metres).</p></dd>
+coordinates (normally metres). Alternatively pass an <code>ofe_variogram</code>
+object from <code><a href="ofe_variogram.html">ofe_variogram()</a></code> as <code>nugget</code> and leave the other two out:
+the parameters and the model are then taken from the fit, which saves
+transcribing the range – the number that matters most here and the one a
+variogram reports two ways.</p></dd>
 
 
 <dt id="arg-target-kse">target_kse<a class="anchor" aria-label="anchor" href="#arg-target-kse"></a></dt>

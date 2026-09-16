@@ -18,6 +18,24 @@ core count – and reports the precision floor the nugget imposes.
 [`place_point_samples()`](https://www.zcao.space/ofeIntegrateR/reference/place_point_samples.md)
 chooses the locations.
 
+## Look at it
+
+[`ofe_map()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_map.md)
+draws any column over the trial – yield, a kriged soil surface,
+elevation, the zones, the residuals – and
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) methods cover
+the trial design
+([`plot.ofe_design()`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_design.md)),
+the zones
+([`plot.ofe_zones()`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_zones.md)),
+the variogram
+([`plot.ofe_variogram()`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_variogram.md))
+and a fitted model's diagnostics
+([`plot.ofe_fit()`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_fit.md)).
+[`ofe_palette()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_palette.md)
+holds the colours, chosen against a colour-vision validator rather than
+by eye.
+
 ## Prepare the data
 
 [`grid_dense_layer()`](https://www.zcao.space/ofeIntegrateR/reference/grid_dense_layer.md)
@@ -27,6 +45,10 @@ separable residual needs.
 interpolates the sparse layer onto the same grid, and
 [`cv_krige_surface()`](https://www.zcao.space/ofeIntegrateR/reference/cv_krige_surface.md)
 says whether it was dense enough to be worth it.
+[`ofe_variogram()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_variogram.md)
+fits and draws the variogram those steps depend on: the range says how
+far one core speaks for, and the nugget says how much variation no
+sampling density will ever resolve.
 
 ## Analyse
 
@@ -94,10 +116,16 @@ reads contrasts out of any of the fits.
 
 ## Simulate
 
+[`simulate_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_paddock.md)
+builds a paddock whose truth is known: a correlated yield-potential
+surface, covariate layers related to it by a chosen correlation,
+pseudo-environments with their own treatment response, and a trial laid
+into it – so the zoning and the analysis can be scored rather than
+merely run.
 [`simulate_ofe_trial()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_ofe_trial.md)
-for a tidy lattice,
+gives a tidy lattice for quick tests, and
 [`simulate_yield_monitor()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_yield_monitor.md)
-for the awkward shape a real harvester produces.
+the awkward shape a real harvester produces.
 
 Developed for the AAGI-CU-RD-OFE GRDC project (“Development of processes
 to integrate point-source data and high-resolution data”).

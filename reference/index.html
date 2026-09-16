@@ -101,7 +101,7 @@
       </dl></div><div class="section level2">
       <h2 id="checking-the-point-layer">Checking the point layer<a class="anchor" aria-label="anchor" href="#checking-the-point-layer"></a></h2>
 
-      <div class="section-desc"><p>Whether the samples are dense enough to reconstruct their own surface.</p></div>
+      <div class="section-desc"><p>What the samples say about the scale of the variation, and whether they are dense enough to reconstruct their own surface.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -109,6 +109,27 @@
 
 
       <dl><dt>
+
+          <code><a href="ofe_variogram.html">ofe_variogram()</a></code>
+
+        </dt>
+        <dd>Empirical and fitted variogram of a point-sampled variable</dd>
+
+        <dt>
+
+          <code><a href="print.ofe_variogram.html">print(<i>&lt;ofe_variogram&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Report a fitted variogram</dd>
+
+        <dt>
+
+          <code><a href="plot.ofe_variogram.html">plot(<i>&lt;ofe_variogram&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot an empirical variogram and the model fitted to it</dd>
+
+        <dt>
 
           <code><a href="cv_krige_surface.html">cv_krige_surface()</a></code>
 
@@ -251,7 +272,7 @@
       </dl></div><div class="section level2">
       <h2 id="simulating-trials">Simulating trials<a class="anchor" aria-label="anchor" href="#simulating-trials"></a></h2>
 
-      <div class="section-desc"><p>A tidy lattice for quick tests, and the awkward shape a real harvester produces for testing the full pipeline.</p></div>
+      <div class="section-desc"><p>A paddock whose truth is known, a tidy lattice for quick tests, and the awkward shape a real harvester produces for testing the full pipeline.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -259,6 +280,13 @@
 
 
       <dl><dt>
+
+          <code><a href="simulate_paddock.html">simulate_paddock()</a></code>
+
+        </dt>
+        <dd>Simulate a paddock, its covariate layers, and a trial in it</dd>
+
+        <dt>
 
           <code><a href="simulate_ofe_trial.html">simulate_ofe_trial()</a></code>
 
@@ -271,6 +299,50 @@
 
         </dt>
         <dd>Simulate a trial as a yield monitor actually records it</dd>
+      </dl></div><div class="section level2">
+      <h2 id="looking-at-it">Looking at it<a class="anchor" aria-label="anchor" href="#looking-at-it"></a></h2>
+
+      <div class="section-desc"><p>Maps and diagnostics. A trial is a thing in a paddock, and most mistakes in one are visible on a map and invisible in a table.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ofe_map.html">ofe_map()</a></code>
+
+        </dt>
+        <dd>Map a variable over the trial</dd>
+
+        <dt>
+
+          <code><a href="plot.ofe_design.html">plot(<i>&lt;ofe_design&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Draw the trial layout</dd>
+
+        <dt>
+
+          <code><a href="plot.ofe_zones.html">plot(<i>&lt;ofe_zones&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Draw a zone map</dd>
+
+        <dt>
+
+          <code><a href="plot.ofe_fit.html">plot(<i>&lt;ofe_fit&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Diagnostic plots for a fitted spatial model</dd>
+
+        <dt>
+
+          <code><a href="ofe_palette.html">ofe_palette()</a></code>
+
+        </dt>
+        <dd>Colours used by the package's plots</dd>
       </dl></div><div class="section level2">
       <h2 id="package">Package<a class="anchor" aria-label="anchor" href="#package"></a></h2>
 

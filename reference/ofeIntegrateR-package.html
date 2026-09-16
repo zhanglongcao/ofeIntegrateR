@@ -63,13 +63,27 @@ sampling interval and a core count – and reports the precision floor the
 nugget imposes. <code><a href="place_point_samples.html">place_point_samples()</a></code> chooses the locations.</p>
     </div>
     <div class="section level2">
+    <h2 id="look-at-it">Look at it<a class="anchor" aria-label="anchor" href="#look-at-it"></a></h2>
+
+
+<p><code><a href="ofe_map.html">ofe_map()</a></code> draws any column over the trial – yield, a kriged soil surface,
+elevation, the zones, the residuals – and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> methods cover the trial
+design (<code><a href="plot.ofe_design.html">plot.ofe_design()</a></code>), the zones (<code><a href="plot.ofe_zones.html">plot.ofe_zones()</a></code>), the variogram
+(<code><a href="plot.ofe_variogram.html">plot.ofe_variogram()</a></code>) and a fitted model's diagnostics
+(<code><a href="plot.ofe_fit.html">plot.ofe_fit()</a></code>). <code><a href="ofe_palette.html">ofe_palette()</a></code> holds the colours, chosen against a
+colour-vision validator rather than by eye.</p>
+    </div>
+    <div class="section level2">
     <h2 id="prepare-the-data">Prepare the data<a class="anchor" aria-label="anchor" href="#prepare-the-data"></a></h2>
 
 
 <p><code><a href="grid_dense_layer.html">grid_dense_layer()</a></code> snaps an irregular yield-monitor cloud onto the
 complete lattice a separable residual needs. <code><a href="krige_point_samples.html">krige_point_samples()</a></code>
 interpolates the sparse layer onto the same grid, and <code><a href="cv_krige_surface.html">cv_krige_surface()</a></code>
-says whether it was dense enough to be worth it.</p>
+says whether it was dense enough to be worth it. <code><a href="ofe_variogram.html">ofe_variogram()</a></code> fits and
+draws the variogram those steps depend on: the range says how far one core
+speaks for, and the nugget says how much variation no sampling density will
+ever resolve.</p>
     </div>
     <div class="section level2">
     <h2 id="analyse">Analyse<a class="anchor" aria-label="anchor" href="#analyse"></a></h2>
@@ -131,8 +145,13 @@ and <code><a href="extract_fixed_effects.html">extract_fixed_effects()</a></code
     <h2 id="simulate">Simulate<a class="anchor" aria-label="anchor" href="#simulate"></a></h2>
 
 
-<p><code><a href="simulate_ofe_trial.html">simulate_ofe_trial()</a></code> for a tidy lattice, <code><a href="simulate_yield_monitor.html">simulate_yield_monitor()</a></code> for
-the awkward shape a real harvester produces.</p>
+<p><code><a href="simulate_paddock.html">simulate_paddock()</a></code> builds a paddock whose truth is known: a correlated
+yield-potential surface, covariate layers related to it by a chosen
+correlation, pseudo-environments with their own treatment response, and a
+trial laid into it – so the zoning and the analysis can be scored rather
+than merely run. <code><a href="simulate_ofe_trial.html">simulate_ofe_trial()</a></code> gives a tidy lattice for quick
+tests, and <code><a href="simulate_yield_monitor.html">simulate_yield_monitor()</a></code> the awkward shape a real harvester
+produces.</p>
 <p>Developed for the AAGI-CU-RD-OFE GRDC project
 (“Development of processes to integrate point-source data and
 high-resolution data”).</p>

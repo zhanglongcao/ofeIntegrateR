@@ -28,8 +28,15 @@ model needs, and interpolating the sparse layer onto the same grid.
 
 ## Checking the point layer
 
-Whether the samples are dense enough to reconstruct their own surface.
+What the samples say about the scale of the variation, and whether they
+are dense enough to reconstruct their own surface.
 
+- [`ofe_variogram()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_variogram.md)
+  : Empirical and fitted variogram of a point-sampled variable
+- [`print(`*`<ofe_variogram>`*`)`](https://www.zcao.space/ofeIntegrateR/reference/print.ofe_variogram.md)
+  : Report a fitted variogram
+- [`plot(`*`<ofe_variogram>`*`)`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_variogram.md)
+  : Plot an empirical variogram and the model fitted to it
 - [`cv_krige_surface()`](https://www.zcao.space/ofeIntegrateR/reference/cv_krige_surface.md)
   : Cross-validate a kriged point-source surface
 
@@ -99,14 +106,32 @@ against, and a model-agnostic way to read the contrasts out.
 
 ## Simulating trials
 
-A tidy lattice for quick tests, and the awkward shape a real harvester
-produces for testing the full pipeline.
+A paddock whose truth is known, a tidy lattice for quick tests, and the
+awkward shape a real harvester produces for testing the full pipeline.
 
+- [`simulate_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_paddock.md)
+  : Simulate a paddock, its covariate layers, and a trial in it
 - [`simulate_ofe_trial()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_ofe_trial.md)
   : Simulate a synthetic OFE strip trial with a sparse point-source
   covariate
 - [`simulate_yield_monitor()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_yield_monitor.md)
   : Simulate a trial as a yield monitor actually records it
+
+## Looking at it
+
+Maps and diagnostics. A trial is a thing in a paddock, and most mistakes
+in one are visible on a map and invisible in a table.
+
+- [`ofe_map()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_map.md)
+  : Map a variable over the trial
+- [`plot(`*`<ofe_design>`*`)`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_design.md)
+  : Draw the trial layout
+- [`plot(`*`<ofe_zones>`*`)`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_zones.md)
+  : Draw a zone map
+- [`plot(`*`<ofe_fit>`*`)`](https://www.zcao.space/ofeIntegrateR/reference/plot.ofe_fit.md)
+  : Diagnostic plots for a fitted spatial model
+- [`ofe_palette()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_palette.md)
+  : Colours used by the package's plots
 
 ## Package
 

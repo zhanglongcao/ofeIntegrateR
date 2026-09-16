@@ -6,6 +6,61 @@ First release.
 
 ### New features
 
+- [`simulate_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/simulate_paddock.md)
+  builds a paddock whose truth is known, which the package had no way to
+  do: the existing simulators produced a trial but never covariate
+  layers (so
+  [`partition_paddock()`](https://www.zcao.space/ofeIntegrateR/reference/partition_paddock.md)
+  had nothing to zone), never zones (so
+  [`partition_pseudo_env()`](https://www.zcao.space/ofeIntegrateR/reference/partition_pseudo_env.md)
+  had no answer to be checked against), and never separated yield
+  potential from treatment response (so nothing could be attributed). It
+  draws a correlated yield-potential surface, then each named covariate
+  as a mixture of that surface and its own structure in a proportion you
+  set – a covariate unrelated to yield is not worth zoning on, and one
+  identical to it is an unrealistically easy test. Pseudo-environments
+  cut across the strips and scale the treatment response zone by zone,
+  so a zone-by-treatment interaction is genuinely present or genuinely
+  absent, and both cases can be tested. The settings and the realised
+  component variances are attached as `attr(, "truth")`.
+
+- [`ofe_variogram()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_variogram.md)
+  fits and draws the variogram, which the package had been kriging from
+  without ever showing. It bins every pair of samples by distance, fits
+  exponential, spherical and Gaussian models by a constrained search,
+  and reports the nugget, sill and practical range with the usual
+  classification of spatial dependence. Two things it does that a plain
+  variogram call does not: `trend = ~ treat` strips a mean effect first,
+  since a treatment step keeps the variogram climbing and inflates the
+  range; and when the fitted practical range is longer than the largest
+  lag the samples cover, it says so, in
+  [`print()`](https://rdrr.io/r/base/print.html) and on the plot, rather
+  than reporting a number the data never supported.
+  [`kriging_sample_interval()`](https://www.zcao.space/ofeIntegrateR/reference/kriging_sample_interval.md)
+  now takes the fitted object directly.
+
+- [`ofe_map()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_map.md)
+  draws any column over the trial, and
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) methods cover
+  the design, the zones, the variogram and a fitted model.
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on an
+  `ofe_fit` gives the diagnostic the package most needed: a spatial
+  model is fitted to absorb the field’s pattern, so the question is
+  whether any is left, and the residual map and residual variogram
+  answer it.
+
+- [`ofe_palette()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_palette.md)
+  holds the plotting colours. They were chosen by running candidate sets
+  through a colour-vision validator against the surface an R device
+  draws on, not by eye: the categorical order is pairwise-separable up
+  to six treatments, the ordinal zone ramp up to seven zones, and label
+  ink is picked per fill by whichever of dark or light actually has more
+  contrast.
+  [`ofe_map()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_map.md)
+  will not select a diverging scale on its own – a variable that merely
+  contains negative values is not a signed one, and a two-hue scale on
+  it invents a midpoint the data does not have.
+
 - [`fit_ofe()`](https://www.zcao.space/ofeIntegrateR/reference/fit_ofe.md)
   fits a linear mixed model by residual maximum likelihood with a
   separable, ASReml-style residual structure, written in base R. It

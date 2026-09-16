@@ -13,8 +13,8 @@ ten.
 ``` r
 kriging_sample_interval(
   nugget,
-  psill,
-  range,
+  psill = NULL,
+  range = NULL,
   target_kse = 0.5,
   area_ha = NULL,
   model = "Exp",
@@ -28,7 +28,12 @@ kriging_sample_interval(
 
   Variogram parameters: nugget \\c_0\\, partial sill \\c_1\\, and
   practical range, in the units of the trial's coordinates (normally
-  metres).
+  metres). Alternatively pass an `ofe_variogram` object from
+  [`ofe_variogram()`](https://www.zcao.space/ofeIntegrateR/reference/ofe_variogram.md)
+  as `nugget` and leave the other two out: the parameters and the model
+  are then taken from the fit, which saves transcribing the range – the
+  number that matters most here and the one a variogram reports two
+  ways.
 
 - target_kse:
 

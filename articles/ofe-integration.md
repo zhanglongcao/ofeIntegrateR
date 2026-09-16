@@ -143,6 +143,70 @@ attr(kr, "variogram")
 Always look at the fitted variogram. A range far larger than the trial,
 or a nugget close to the sill, means the surface is not being estimated.
 
+### What scale does the sampled layer vary at?
+
+Before kriging anything, look at its variogram. The range says how far
+one core speaks for, and the nugget says how much variation no sampling
+density will ever resolve.
+
+``` r
+
+v <- ofe_variogram(sim$point_samples, value = "point_obs",
+                   x = "x", y = "y")
+v
+#> Variogram of `point_obs`  (30 samples, 14 lag bins)
+#> 
+#> Fitted model: gaussian
+#>                     value
+#> nugget (c0)        0.5520
+#> partial sill (c1)  0.7174
+#> total sill         1.2694
+#> range parameter   27.3645
+#> practical range   47.3967
+#> nugget ratio       0.4348
+#> 
+#> Spatial dependence: moderate (nugget ratio 0.43)
+#>   Part of the variation is spatially structured. Kriging will smooth, and
+#>   the surface will be less variable than the truth.
+#> 
+#> Models compared (weighted SSE, lower is better):
+#>               sse
+#> gaussian    7.514
+#> spherical   7.519
+#> exponential 8.206
+plot(v)
+```
+
+![](ofe-integration_files/figure-html/unnamed-chunk-7-1.png)
+
+Two things to check on the printed output. The **nugget ratio**
+classifies the spatial dependence: a weak-dependence layer is noise at
+the distances sampled, and kriging it will return something close to its
+mean whatever you do with it. And if the fitted practical range is
+longer than the largest lag the samples cover, the variogram never
+reached its sill inside the data and the range is an extrapolation — it
+says so rather than reporting the number quietly.
+
+The variogram feeds the sampling calculation directly, so the range is
+not transcribed by hand — it is the number that matters most there, and
+the one a variogram reports two ways:
+
+``` r
+
+plan <- kriging_sample_interval(v, target_kse = 0.8, area_ha = 2.6)
+c(floor = round(plan$kse_floor, 3), interval = round(plan$interval, 1),
+  n = plan$n_samples)
+#>    floor interval        n 
+#>    0.659   40.000   17.000
+```
+
+`kse_floor` is usually the most useful number of the three. The nugget
+cannot be filtered out at an unsampled point, so no sampling density
+whatever gets the kriging standard error below it — here about 0.66 of
+the field standard deviation. Asking for anything tighter is not a
+budget problem, it is impossible, and the function says so rather than
+returning an interval.
+
 ### Is the point layer dense enough?
 
 [`cv_krige_surface()`](https://www.zcao.space/ofeIntegrateR/reference/cv_krige_surface.md)
@@ -338,6 +402,26 @@ ofe_lsd(fit, "treat", adjust = "tukey")
 #> 2     B 0.812414 0.07388445  0.667042833 0.9577852     b
 #> 3     A 0.135865 0.07374326 -0.009228365 0.2809584     c
 ```
+
+### Did the spatial model absorb the pattern?
+
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a fit gives
+four panels, and the first and last are the ones that earn their place.
+A spatial model is fitted precisely to absorb the field’s pattern, so
+the question it has to answer is whether any is left: patches still
+visible on the residual map, or a residual variogram still climbing at
+short lags, mean the residual structure has not done its job and the
+treatment standard errors are optimistic.
+
+``` r
+
+plot(fit)
+```
+
+![](ofe-integration_files/figure-html/unnamed-chunk-18-1.png)
+
+The residual map uses a diverging scale forced symmetric about zero, so
+over- and under-prediction of the same size get the same weight of ink.
 
 ## Step 5 — pseudo-environments
 

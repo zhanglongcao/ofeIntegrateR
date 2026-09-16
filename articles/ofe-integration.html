@@ -188,11 +188,66 @@ everywhere.</p>
 trial, or a nugget close to the sill, means the surface is not being
 estimated.</p>
 <div class="section level3">
+<h3 id="what-scale-does-the-sampled-layer-vary-at">What scale does the sampled layer vary at?<a class="anchor" aria-label="anchor" href="#what-scale-does-the-sampled-layer-vary-at"></a>
+</h3>
+<p>Before kriging anything, look at its variogram. The range says how
+far one core speaks for, and the nugget says how much variation no
+sampling density will ever resolve.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ofe_variogram.html">ofe_variogram</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">point_samples</span>, value <span class="op">=</span> <span class="st">"point_obs"</span>,</span>
+<span>                   x <span class="op">=</span> <span class="st">"x"</span>, y <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
+<span><span class="va">v</span></span>
+<span><span class="co">#&gt; Variogram of `point_obs`  (30 samples, 14 lag bins)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Fitted model: gaussian</span></span>
+<span><span class="co">#&gt;                     value</span></span>
+<span><span class="co">#&gt; nugget (c0)        0.5520</span></span>
+<span><span class="co">#&gt; partial sill (c1)  0.7174</span></span>
+<span><span class="co">#&gt; total sill         1.2694</span></span>
+<span><span class="co">#&gt; range parameter   27.3645</span></span>
+<span><span class="co">#&gt; practical range   47.3967</span></span>
+<span><span class="co">#&gt; nugget ratio       0.4348</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Spatial dependence: moderate (nugget ratio 0.43)</span></span>
+<span><span class="co">#&gt;   Part of the variation is spatially structured. Kriging will smooth, and</span></span>
+<span><span class="co">#&gt;   the surface will be less variable than the truth.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Models compared (weighted SSE, lower is better):</span></span>
+<span><span class="co">#&gt;               sse</span></span>
+<span><span class="co">#&gt; gaussian    7.514</span></span>
+<span><span class="co">#&gt; spherical   7.519</span></span>
+<span><span class="co">#&gt; exponential 8.206</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span></code></pre></div>
+<p><img src="ofe-integration_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="672"></p>
+<p>Two things to check on the printed output. The <strong>nugget
+ratio</strong> classifies the spatial dependence: a weak-dependence
+layer is noise at the distances sampled, and kriging it will return
+something close to its mean whatever you do with it. And if the fitted
+practical range is longer than the largest lag the samples cover, the
+variogram never reached its sill inside the data and the range is an
+extrapolation — it says so rather than reporting the number quietly.</p>
+<p>The variogram feeds the sampling calculation directly, so the range
+is not transcribed by hand — it is the number that matters most there,
+and the one a variogram reports two ways:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kriging_sample_interval.html">kriging_sample_interval</a></span><span class="op">(</span><span class="va">v</span>, target_kse <span class="op">=</span> <span class="fl">0.8</span>, area_ha <span class="op">=</span> <span class="fl">2.6</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>floor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">plan</span><span class="op">$</span><span class="va">kse_floor</span>, <span class="fl">3</span><span class="op">)</span>, interval <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">plan</span><span class="op">$</span><span class="va">interval</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  n <span class="op">=</span> <span class="va">plan</span><span class="op">$</span><span class="va">n_samples</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    floor interval        n </span></span>
+<span><span class="co">#&gt;    0.659   40.000   17.000</span></span></code></pre></div>
+<p><code>kse_floor</code> is usually the most useful number of the
+three. The nugget cannot be filtered out at an unsampled point, so no
+sampling density whatever gets the kriging standard error below it —
+here about 0.66 of the field standard deviation. Asking for anything
+tighter is not a budget problem, it is impossible, and the function says
+so rather than returning an interval.</p>
+</div>
+<div class="section level3">
 <h3 id="is-the-point-layer-dense-enough">Is the point layer dense enough?<a class="anchor" aria-label="anchor" href="#is-the-point-layer-dense-enough"></a>
 </h3>
 <p><code><a href="../reference/cv_krige_surface.html">cv_krige_surface()</a></code> leaves each sample out in turn and
 predicts it from the rest.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cv_krige_surface.html">cv_krige_surface</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">point_samples</span>, value <span class="op">=</span> <span class="st">"point_obs"</span>,</span>
 <span>                       coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>rmse <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">cv</span><span class="op">$</span><span class="va">rmse</span>, <span class="fl">3</span><span class="op">)</span>, r2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">cv</span><span class="op">$</span><span class="va">r2</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
@@ -214,7 +269,7 @@ perfectly and still explain nothing about the treatment response.</p>
 spatial residual. It costs nothing and requires no sampling, so it is
 the honest comparator for anything that does.
 <code><a href="../reference/compare_integration.html">compare_integration()</a></code> fits both and lines them up.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_integration.html">compare_integration</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
 <span>                           covariate <span class="op">=</span> <span class="st">"point_obs_kriged"</span><span class="op">)</span></span>
 <span></span>
@@ -231,7 +286,7 @@ the honest comparator for anything that does.
 precise. Report both models in your write-up: the difference between
 them is exactly what the sampling bought.</p>
 <p>The two fitted models are kept for inspection:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">cmp</span>, <span class="st">"models"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "baseline"   "integrated"</span></span></code></pre></div>
 <p>To fit either model on its own, use
@@ -242,7 +297,7 @@ them is exactly what the sampling bought.</p>
 <h2 id="integrating-more-than-one-point-variable">Integrating more than one point variable<a class="anchor" aria-label="anchor" href="#integrating-more-than-one-point-variable"></a>
 </h2>
 <p>Pass several kriged surfaces and they all enter the model:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/fit_integrated_kriged.html">fit_integrated_kriged</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
 <span>                      covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soil_n_kriged"</span>, <span class="st">"soil_p_kriged"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -314,7 +369,7 @@ does not change when a licence appears or disappears.</p>
 you want a residual structure of your own, call <code><a href="../reference/fit_ofe.html">fit_ofe()</a></code>
 directly; it takes the asreml spellings, so the formula below is the one
 you would write for <code>asreml::asreml()</code>.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">treat</span> <span class="op">+</span> <span class="va">point_obs_kriged</span>, data <span class="op">=</span> <span class="va">kr</span>,</span>
 <span>               residual <span class="op">=</span> <span class="op">~</span> <span class="fu">ar1</span><span class="op">(</span><span class="va">row</span><span class="op">)</span><span class="op">:</span><span class="fu">ar1</span><span class="op">(</span><span class="va">col</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
@@ -342,14 +397,14 @@ you would write for <code>asreml::asreml()</code>.</p>
 <p><code><a href="../reference/wald_tests.html">wald_tests()</a></code> tests each fixed term as a whole — the
 question a trial report asks — rather than one coefficient at a
 time:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               term df      wald         F      p.value</span></span>
 <span><span class="co">#&gt; 1            treat  2 237.09564 118.54782 4.418959e-39</span></span>
 <span><span class="co">#&gt; 2 point_obs_kriged  1  64.88742  64.88742 1.666269e-14</span></span></code></pre></div>
 <p>and <code><a href="../reference/ofe_means.html">ofe_means()</a></code> gives the treatment means, or the
 contrasts between them with the standard error of difference:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ofe_means.html">ofe_means</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   treat estimate  std.error        lower     upper</span></span>
 <span><span class="co">#&gt; 1     A 0.135865 0.07374326 -0.009228365 0.2809584</span></span>
@@ -363,7 +418,7 @@ contrasts between them with the standard error of difference:</p>
 <p><code><a href="../reference/ofe_lsd.html">ofe_lsd()</a></code> puts those together into the table a report
 prints: means sorted best-first, with the a/b/c letters. Levels sharing
 a letter are not separable at <code>alpha</code>.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span><span class="op">)</span></span>
 <span><span class="va">tab</span></span>
 <span><span class="co">#&gt;   treat estimate  std.error        lower     upper group</span></span>
@@ -386,12 +441,29 @@ the value from <code>attr(tab, "lsd")</code> with it.</p>
 comparisons — the convention these letters usually carry, and not a
 family-wise error rate. With more than three or four treatments, say so
 in the caption or adjust:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ofe_lsd.html">ofe_lsd</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"treat"</span>, adjust <span class="op">=</span> <span class="st">"tukey"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   treat estimate  std.error        lower     upper group</span></span>
 <span><span class="co">#&gt; 1     C 1.527703 0.07506330  1.380012017 1.6753932     a</span></span>
 <span><span class="co">#&gt; 2     B 0.812414 0.07388445  0.667042833 0.9577852     b</span></span>
 <span><span class="co">#&gt; 3     A 0.135865 0.07374326 -0.009228365 0.2809584     c</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="did-the-spatial-model-absorb-the-pattern">Did the spatial model absorb the pattern?<a class="anchor" aria-label="anchor" href="#did-the-spatial-model-absorb-the-pattern"></a>
+</h3>
+<p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on a fit gives four panels, and the first and
+last are the ones that earn their place. A spatial model is fitted
+precisely to absorb the field’s pattern, so the question it has to
+answer is whether any is left: patches still visible on the residual
+map, or a residual variogram still climbing at short lags, mean the
+residual structure has not done its job and the treatment standard
+errors are optimistic.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
+<p><img src="ofe-integration_files/figure-html/unnamed-chunk-18-1.png" class="r-plt" alt="" width="768"></p>
+<p>The residual map uses a diverging scale forced symmetric about zero,
+so over- and under-prediction of the same size get the same weight of
+ink.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="step-5-pseudo-environments">Step 5 — pseudo-environments<a class="anchor" aria-label="anchor" href="#step-5-pseudo-environments"></a>
@@ -407,7 +479,7 @@ is wider than the correlation range, because anything narrower is one
 realisation of the same correlated surface. The practical range of a
 fitted exponential variogram therefore sets the minimum zone width, and
 caps how many zones are on offer.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/partition_pseudo_env.html">partition_pseudo_env</a></span><span class="op">(</span><span class="va">kr</span>, response <span class="op">=</span> <span class="st">"yield"</span>, along <span class="op">=</span> <span class="st">"row"</span>,</span>
 <span>                          treat <span class="op">=</span> <span class="st">"treat"</span><span class="op">)</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">z</span>, <span class="st">"partition"</span><span class="op">)</span></span>
@@ -427,7 +499,7 @@ zones would be worse than useless.</p>
 those zones imply. It gives a zone <code>ar1()</code> only in the
 dimensions where it has extent: a zone one row deep would otherwise ask
 for an unidentifiable parameter and fail.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/adaptive_residual.html">adaptive_residual</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span></span>
 <span><span class="va">r</span></span>
 <span><span class="co">#&gt; ~dsum(~ar1(row):ar1(col) | zone, levels = c("1"))</span></span>
@@ -441,7 +513,7 @@ for an unidentifiable parameter and fail.</p>
 <span><span class="co">#&gt; 1    1 324    12    27 ar1(row):ar1(col)</span></span></code></pre></div>
 <p>If more than one zone was found, fitting a zone-specific treatment
 effect is one call:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nlevels.html" class="external-link">nlevels</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">zone</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">fit_z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_ofe.html">fit_ofe</a></span><span class="op">(</span><span class="va">yield</span> <span class="op">~</span> <span class="va">zone</span> <span class="op">+</span> <span class="va">zone</span><span class="op">:</span><span class="va">treat</span>, data <span class="op">=</span> <span class="va">z</span>, residual <span class="op">=</span> <span class="va">r</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/wald_tests.html">wald_tests</a></span><span class="op">(</span><span class="va">fit_z</span><span class="op">)</span><span class="op">)</span></span>
@@ -458,7 +530,7 @@ should instead come from what is known before harvest – elevation, an
 EM38 or gamma survey, a soil test grid – and may be any shape,
 <code><a href="../reference/partition_paddock.html">partition_paddock()</a></code> clusters those covariates directly.
 Here is a synthetic elevation and soil layer over the same grid:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">kr</span><span class="op">$</span><span class="va">elevation</span> <span class="op">&lt;-</span> <span class="fl">100</span> <span class="op">+</span> <span class="fl">4</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="op">(</span><span class="op">(</span><span class="va">kr</span><span class="op">$</span><span class="va">y_centre</span> <span class="op">-</span> <span class="fl">30</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">/</span> <span class="fl">400</span><span class="op">)</span></span>
 <span><span class="va">kr</span><span class="op">$</span><span class="va">clay</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">kr</span><span class="op">$</span><span class="va">x_centre</span> <span class="op">&gt;</span> <span class="fl">120</span>, <span class="fl">20</span>, <span class="fl">32</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
