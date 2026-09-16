@@ -31,7 +31,11 @@
 #'
 #' @param nugget,psill,range Variogram parameters: nugget \eqn{c_0}, partial
 #'   sill \eqn{c_1}, and practical range, in the units of the trial's
-#'   coordinates (normally metres).
+#'   coordinates (normally metres). Alternatively pass an `ofe_variogram`
+#'   object from [ofe_variogram()] as `nugget` and leave the other two out:
+#'   the parameters and the model are then taken from the fit, which saves
+#'   transcribing the range -- the number that matters most here and the one a
+#'   variogram reports two ways.
 #' @param target_kse Target kriging standard error as a fraction of the field
 #'   standard deviation. Must exceed `kse_floor` to be attainable.
 #' @param area_ha Optional trial area in hectares. When given, the sample count
@@ -62,12 +66,33 @@
 #'
 #' @export
 kriging_sample_interval <- function(nugget,
-                                     psill,
-                                     range,
+                                     psill = NULL,
+                                     range = NULL,
                                      target_kse = 0.5,
                                      area_ha = NULL,
                                      model = "Exp",
                                      intervals = NULL) {
+  if (inherits(nugget, "ofe_variogram")) {
+    v <- nugget
+    if (!is.null(psill) || !is.null(range)) {
+      stop("Pass either a fitted variogram or `nugget`/`psill`/`range`, not ",
+           "both.", call. = FALSE)
+    }
+    if (!isTRUE(v$range_identified)) {
+      warning("The variogram's practical range was not identified within the ",
+              "distances sampled, so this interval rests on an extrapolation. ",
+              "See print() of the variogram.", call. = FALSE)
+    }
+    nugget <- v$nugget
+    psill <- v$psill
+    range <- v$practical_range
+    model <- switch(v$model, exponential = "Exp", spherical = "Sph",
+                    gaussian = "Gau", "Exp")
+  }
+  if (is.null(psill) || is.null(range)) {
+    stop("Supply `psill` and `range`, or pass an `ofe_variogram` object as ",
+         "`nugget`.", call. = FALSE)
+  }
   if (!is.numeric(range) || length(range) != 1L || range <= 0) {
     stop("`range` must be a single positive number.", call. = FALSE)
   }

@@ -6,8 +6,8 @@
 \usage{
 kriging_sample_interval(
   nugget,
-  psill,
-  range,
+  psill = NULL,
+  range = NULL,
   target_kse = 0.5,
   area_ha = NULL,
   model = "Exp",
@@ -17,7 +17,11 @@ kriging_sample_interval(
 \arguments{
 \item{nugget, psill, range}{Variogram parameters: nugget \eqn{c_0}, partial
 sill \eqn{c_1}, and practical range, in the units of the trial's
-coordinates (normally metres).}
+coordinates (normally metres). Alternatively pass an \code{ofe_variogram}
+object from \code{\link[=ofe_variogram]{ofe_variogram()}} as \code{nugget} and leave the other two out:
+the parameters and the model are then taken from the fit, which saves
+transcribing the range -- the number that matters most here and the one a
+variogram reports two ways.}
 
 \item{target_kse}{Target kriging standard error as a fraction of the field
 standard deviation. Must exceed \code{kse_floor} to be attainable.}

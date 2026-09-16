@@ -764,5 +764,6 @@ partition_paddock <- function(data, covariates, k = NULL,
     spacing = spacing, area = area_total, n_cells = n, n_dropped = n_drop,
     neighbours = neighbours, table = crit, zones = summ
   )
+  class(data) <- unique(c("ofe_zones", class(data)))
   data
 }

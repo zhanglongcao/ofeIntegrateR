@@ -26,6 +26,7 @@ is used where licensed, but nothing here requires a commercial licence.
 | Decide where the cores go | `place_point_samples()` |
 | Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
 | Interpolate the sparse layer onto that lattice | `krige_point_samples()` |
+| Fit and draw the variogram of the sampled layer | `ofe_variogram()` |
 | Check the point layer is dense enough to be worth using | `cv_krige_surface()` |
 | Find the pseudo-environments the spatial covariance supports | `partition_pseudo_env()` |
 | Zone a paddock into contiguous regions from elevation and soil | `partition_paddock()` |
@@ -37,9 +38,17 @@ is used where licensed, but nothing here requires a commercial licence.
 | Fit either model on its own | `fit_integrated_kriged()` |
 | Model both layers jointly instead | `fit_integrated_joint()` |
 | Pull treatment contrasts out of any of them | `extract_fixed_effects()` |
+| Map anything over the trial, and diagnose the fit | `ofe_map()`, `plot()` |
 
-Two simulators generate test data: `simulate_ofe_trial()` for a tidy lattice,
-and `simulate_yield_monitor()` for the awkward shape a real harvester produces —
+Three simulators generate test data. `simulate_paddock()` is the one to reach
+for: a correlated yield-potential surface, covariate layers related to it by a
+correlation you choose, pseudo-environments with their own treatment response,
+and a trial laid into it — with the truth attached as `attr(, "truth")`, so the
+zoning and the analysis can be *scored* rather than merely run. A covariate
+unrelated to yield is not worth zoning on and one identical to it is an
+unrealistically easy test, so the default puts elevation and soil part-way, as
+they are. `simulate_ofe_trial()` gives a tidy lattice for quick tests, and
+`simulate_yield_monitor()` the awkward shape a real harvester produces —
 GPS-referenced points along passes, position error, a clipped paddock corner and
 missing passes.
 
@@ -51,6 +60,33 @@ Two articles:
   `agridat::lasrosas.corn`, an on-farm nitrogen experiment from Argentina
   recorded by a yield monitor, where the data arrive in the state real data
   arrive in.
+
+## Looking at it
+
+A trial is a thing in a paddock, and most of what goes wrong in one is obvious
+on a map and invisible in a table. Every stage has a `plot()`:
+
+```r
+plot(make_trial_design(c("N0", "N60", "N120"), n_rep = 4))  # the plan
+plot(ofe_variogram(cores, value = "soil_n"))                # the sampled layer
+plot(partition_paddock(g, covariates = c("elevation", "clay")))   # the zones
+plot(fit)                                    # residual map, Q-Q, residual variogram
+ofe_map(g, "yield")                          # or map any column yourself
+```
+
+`plot(fit)` is the one to run before quoting a standard error. A spatial model
+is fitted precisely to absorb the field's pattern, so the question is whether
+any is left: if the residual map still shows patches, or the residual variogram
+is still climbing at short lags, the residual structure has not done its job and
+the treatment standard errors are optimistic.
+
+The colours are not a matter of taste and were not picked by eye. Each scale was
+run through a colour-vision validator against the surface an R device actually
+draws on, and only sets clearing every gate are used — the categorical order is
+pairwise-separable up to six treatments, the zone ramp up to seven zones, and
+`ofe_map()` will not choose a diverging scale on its own, because a variable
+that merely contains negative values is not thereby a signed one. `ofe_palette()`
+exposes them.
 
 ## Analysis without asreml
 

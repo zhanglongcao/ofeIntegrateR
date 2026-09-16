@@ -13,11 +13,22 @@
 #' sampling interval and a core count -- and reports the precision floor the
 #' nugget imposes. [place_point_samples()] chooses the locations.
 #'
+#' @section Look at it:
+#' [ofe_map()] draws any column over the trial -- yield, a kriged soil surface,
+#' elevation, the zones, the residuals -- and `plot()` methods cover the trial
+#' design ([plot.ofe_design()]), the zones ([plot.ofe_zones()]), the variogram
+#' ([plot.ofe_variogram()]) and a fitted model's diagnostics
+#' ([plot.ofe_fit()]). [ofe_palette()] holds the colours, chosen against a
+#' colour-vision validator rather than by eye.
+#'
 #' @section Prepare the data:
 #' [grid_dense_layer()] snaps an irregular yield-monitor cloud onto the
 #' complete lattice a separable residual needs. [krige_point_samples()]
 #' interpolates the sparse layer onto the same grid, and [cv_krige_surface()]
-#' says whether it was dense enough to be worth it.
+#' says whether it was dense enough to be worth it. [ofe_variogram()] fits and
+#' draws the variogram those steps depend on: the range says how far one core
+#' speaks for, and the nugget says how much variation no sampling density will
+#' ever resolve.
 #'
 #' @section Analyse:
 #' [fit_ofe()] fits a spatial mixed model by REML with ASReml-style residual
@@ -63,8 +74,13 @@
 #' and [extract_fixed_effects()] reads contrasts out of any of the fits.
 #'
 #' @section Simulate:
-#' [simulate_ofe_trial()] for a tidy lattice, [simulate_yield_monitor()] for
-#' the awkward shape a real harvester produces.
+#' [simulate_paddock()] builds a paddock whose truth is known: a correlated
+#' yield-potential surface, covariate layers related to it by a chosen
+#' correlation, pseudo-environments with their own treatment response, and a
+#' trial laid into it -- so the zoning and the analysis can be scored rather
+#' than merely run. [simulate_ofe_trial()] gives a tidy lattice for quick
+#' tests, and [simulate_yield_monitor()] the awkward shape a real harvester
+#' produces.
 #'
 #' Developed for the AAGI-CU-RD-OFE GRDC project
 #' (\dQuote{Development of processes to integrate point-source data and

@@ -117,6 +117,42 @@ attr(kr, "variogram")
 Always look at the fitted variogram. A range far larger than the trial, or a
 nugget close to the sill, means the surface is not being estimated.
 
+### What scale does the sampled layer vary at?
+
+Before kriging anything, look at its variogram. The range says how far one core
+speaks for, and the nugget says how much variation no sampling density will
+ever resolve.
+
+```{r, fig.width = 7, fig.height = 4.2}
+v <- ofe_variogram(sim$point_samples, value = "point_obs",
+                   x = "x", y = "y")
+v
+plot(v)
+```
+
+Two things to check on the printed output. The **nugget ratio** classifies the
+spatial dependence: a weak-dependence layer is noise at the distances sampled,
+and kriging it will return something close to its mean whatever you do with it.
+And if the fitted practical range is longer than the largest lag the samples
+cover, the variogram never reached its sill inside the data and the range is an
+extrapolation — it says so rather than reporting the number quietly.
+
+The variogram feeds the sampling calculation directly, so the range is not
+transcribed by hand — it is the number that matters most there, and the one a
+variogram reports two ways:
+
+```{r}
+plan <- kriging_sample_interval(v, target_kse = 0.8, area_ha = 2.6)
+c(floor = round(plan$kse_floor, 3), interval = round(plan$interval, 1),
+  n = plan$n_samples)
+```
+
+`kse_floor` is usually the most useful number of the three. The nugget cannot
+be filtered out at an unsampled point, so no sampling density whatever gets the
+kriging standard error below it — here about `r round(plan$kse_floor, 2)` of the
+field standard deviation. Asking for anything tighter is not a budget problem,
+it is impossible, and the function says so rather than returning an interval.
+
 ### Is the point layer dense enough?
 
 `cv_krige_surface()` leaves each sample out in turn and predicts it from the
@@ -241,6 +277,22 @@ three or four treatments, say so in the caption or adjust:
 ```{r}
 ofe_lsd(fit, "treat", adjust = "tukey")
 ```
+
+### Did the spatial model absorb the pattern?
+
+`plot()` on a fit gives four panels, and the first and last are the ones that
+earn their place. A spatial model is fitted precisely to absorb the field's
+pattern, so the question it has to answer is whether any is left: patches still
+visible on the residual map, or a residual variogram still climbing at short
+lags, mean the residual structure has not done its job and the treatment
+standard errors are optimistic.
+
+```{r, fig.width = 8, fig.height = 6.5}
+plot(fit)
+```
+
+The residual map uses a diverging scale forced symmetric about zero, so
+over- and under-prediction of the same size get the same weight of ink.
 
 ## Step 5 — pseudo-environments
 

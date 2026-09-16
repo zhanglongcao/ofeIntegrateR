@@ -178,5 +178,8 @@ make_trial_design <- function(treatments,
     cell_size = cell_size, gap = if (layout == "stack") gap else 0,
     randomise = randomise, trial_width = trial_width,
     trial_length = trial_length, area_ha = trial_width * trial_length / 10000)
+  # Classed so that plot() draws the layout. It stays a data frame in every
+  # other respect, so existing code that subsets or joins it is unaffected.
+  class(g) <- c("ofe_design", class(g))
   g
 }

@@ -23,12 +23,25 @@ sampling interval and a core count -- and reports the precision floor the
 nugget imposes. \code{\link[=place_point_samples]{place_point_samples()}} chooses the locations.
 }
 
+\section{Look at it}{
+
+\code{\link[=ofe_map]{ofe_map()}} draws any column over the trial -- yield, a kriged soil surface,
+elevation, the zones, the residuals -- and \code{plot()} methods cover the trial
+design (\code{\link[=plot.ofe_design]{plot.ofe_design()}}), the zones (\code{\link[=plot.ofe_zones]{plot.ofe_zones()}}), the variogram
+(\code{\link[=plot.ofe_variogram]{plot.ofe_variogram()}}) and a fitted model's diagnostics
+(\code{\link[=plot.ofe_fit]{plot.ofe_fit()}}). \code{\link[=ofe_palette]{ofe_palette()}} holds the colours, chosen against a
+colour-vision validator rather than by eye.
+}
+
 \section{Prepare the data}{
 
 \code{\link[=grid_dense_layer]{grid_dense_layer()}} snaps an irregular yield-monitor cloud onto the
 complete lattice a separable residual needs. \code{\link[=krige_point_samples]{krige_point_samples()}}
 interpolates the sparse layer onto the same grid, and \code{\link[=cv_krige_surface]{cv_krige_surface()}}
-says whether it was dense enough to be worth it.
+says whether it was dense enough to be worth it. \code{\link[=ofe_variogram]{ofe_variogram()}} fits and
+draws the variogram those steps depend on: the range says how far one core
+speaks for, and the nugget says how much variation no sampling density will
+ever resolve.
 }
 
 \section{Analyse}{
@@ -84,8 +97,13 @@ and \code{\link[=extract_fixed_effects]{extract_fixed_effects()}} reads contrast
 
 \section{Simulate}{
 
-\code{\link[=simulate_ofe_trial]{simulate_ofe_trial()}} for a tidy lattice, \code{\link[=simulate_yield_monitor]{simulate_yield_monitor()}} for
-the awkward shape a real harvester produces.
+\code{\link[=simulate_paddock]{simulate_paddock()}} builds a paddock whose truth is known: a correlated
+yield-potential surface, covariate layers related to it by a chosen
+correlation, pseudo-environments with their own treatment response, and a
+trial laid into it -- so the zoning and the analysis can be scored rather
+than merely run. \code{\link[=simulate_ofe_trial]{simulate_ofe_trial()}} gives a tidy lattice for quick
+tests, and \code{\link[=simulate_yield_monitor]{simulate_yield_monitor()}} the awkward shape a real harvester
+produces.
 
 Developed for the AAGI-CU-RD-OFE GRDC project
 (\dQuote{Development of processes to integrate point-source data and

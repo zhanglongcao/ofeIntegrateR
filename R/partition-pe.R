@@ -316,6 +316,7 @@ partition_pseudo_env <- function(data, response, along = "row", treat = NULL,
     breaks = brk, zones = summ, bic = bic_tab,
     profile = data.frame(pos = agg$pos, value = agg$value, n = agg$n)
   )
+  class(data) <- unique(c("ofe_zones", class(data)))
   data
 }
 

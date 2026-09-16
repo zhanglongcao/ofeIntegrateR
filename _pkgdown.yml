@@ -36,8 +36,12 @@ reference:
 
 - title: Checking the point layer
   desc: >
-    Whether the samples are dense enough to reconstruct their own surface.
+    What the samples say about the scale of the variation, and whether they are
+    dense enough to reconstruct their own surface.
   contents:
+  - ofe_variogram
+  - print.ofe_variogram
+  - plot.ofe_variogram
   - cv_krige_surface
 
 - title: Fitting the spatial model
@@ -81,11 +85,23 @@ reference:
 
 - title: Simulating trials
   desc: >
-    A tidy lattice for quick tests, and the awkward shape a real harvester
-    produces for testing the full pipeline.
+    A paddock whose truth is known, a tidy lattice for quick tests, and the
+    awkward shape a real harvester produces for testing the full pipeline.
   contents:
+  - simulate_paddock
   - simulate_ofe_trial
   - simulate_yield_monitor
+
+- title: Looking at it
+  desc: >
+    Maps and diagnostics. A trial is a thing in a paddock, and most mistakes in
+    one are visible on a map and invisible in a table.
+  contents:
+  - ofe_map
+  - plot.ofe_design
+  - plot.ofe_zones
+  - plot.ofe_fit
+  - ofe_palette
 
 - title: Package
   contents:
