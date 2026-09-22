@@ -22,6 +22,7 @@ simulate_yield_monitor(
   n_point_samples = 30L,
   point_obs_noise_sd = 0.3,
   point_design = c("random", "strip_ends"),
+  defects = FALSE,
   truth_res = 3,
   seed = NULL
 )
@@ -60,6 +61,16 @@ rectangle.}
 \item{point_design}{\code{"random"} spreads samples over the trial;
 \code{"strip_ends"} places them at both ends of every strip, the pattern growers
 commonly use when each sample is expensive to collect.}
+
+\item{defects}{Logical or a named list; add the faults a real monitor file
+carries, and label each damaged point in a \code{defect} column so a cleaning
+rule can be scored rather than eyeballed. \code{FALSE} (default) leaves the
+cloud sound. \code{TRUE} uses settings in the range reported for commercial
+monitors: the opening and closing 12 m of each pass read low and high as
+grain reaches the sensor (\code{ramp_m}, \code{ramp_low}, \code{ramp_high}), the machine
+slows into each turn (\code{slow_m}, \code{slow_factor}), and 2\% of readings are
+dropouts or spikes (\code{outlier_prob}, \code{spike_factor}). A named list
+overrides any of those.}
 
 \item{truth_res}{Resolution (m) of the grid on which the point-source surface
 is simulated before being read off at the recorded locations.}

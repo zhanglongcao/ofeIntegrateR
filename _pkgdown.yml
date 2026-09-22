@@ -25,11 +25,19 @@ reference:
   - kriging_sample_interval
   - place_point_samples
 
+- title: Cleaning the raw file
+  desc: >
+    What a harvester records but did not really measure. Run before anything
+    else: two of the defects are systematic and survive averaging.
+  contents:
+  - clean_yield_monitor
+
 - title: Preparing the data
   desc: >
     Getting an irregular yield-monitor cloud onto the lattice a spatial model
     needs, and interpolating the sparse layer onto the same grid.
   contents:
+  - choose_cell_size
   - grid_dense_layer
   - krige_point_samples
 

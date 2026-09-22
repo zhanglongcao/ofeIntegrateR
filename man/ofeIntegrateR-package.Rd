@@ -33,8 +33,20 @@ design (\code{\link[=plot.ofe_design]{plot.ofe_design()}}), the zones (\code{\li
 colour-vision validator rather than by eye.
 }
 
+\section{Clean the raw file}{
+
+\code{\link[=clean_yield_monitor]{clean_yield_monitor()}} removes what the harvester recorded but did not
+measure: the opening metres of each pass, read low while grain is still
+reaching the sensor, the closing metres read high, points taken while the
+machine was slowing into a turn, and dropouts. Two of those are systematic
+and sit at the same edges of every pass, so averaging into cells does not
+cancel them -- they arrive in the analysis as spatial structure.
+}
+
 \section{Prepare the data}{
 
+\code{\link[=choose_cell_size]{choose_cell_size()}} weighs the trade-off a cell size makes -- detail
+against support and treatment purity -- and recommends one by a stated rule.
 \code{\link[=grid_dense_layer]{grid_dense_layer()}} snaps an irregular yield-monitor cloud onto the
 complete lattice a separable residual needs. \code{\link[=krige_point_samples]{krige_point_samples()}}
 interpolates the sparse layer onto the same grid, and \code{\link[=cv_krige_surface]{cv_krige_surface()}}

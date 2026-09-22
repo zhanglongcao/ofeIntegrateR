@@ -68,17 +68,33 @@ to straddle a treatment boundary. `grid_dense_layer()` reports both sides of
 that trade-off, so it can be made on evidence rather than habit.
 
 ```{r}
-sizes <- c(5, 8, 10, 15, 20)
-do.call(rbind, lapply(sizes, function(cs) {
-  g <- grid_dense_layer(d, x = "x", y = "y", response = "yield", treat = "nf",
-                        cell_size = cs)
-  data.frame(cell_m = cs,
-             cells = nrow(g),
-             with_data = sum(g$n_obs > 0),
-             median_obs = median(g$n_obs[g$n_obs > 0]),
-             pure = round(mean(g$treat_purity == 1, na.rm = TRUE), 2))
-}))
+tab <- choose_cell_size(d, response = "yield", treat = "nf",
+                        sizes = c(5, 8, 10, 15, 20))
+tab
+c(recommended = attr(tab, "recommended"))
 ```
+
+`pure` is the share of occupied cells lying wholly inside one nitrogen rate. It
+falls as cells grow, because a bigger cell is more likely to span a boundary,
+while `median_obs` rises. That is the whole trade, and it is specific to this
+trial's geometry rather than something a convention can settle.
+
+**No size qualifies, and the warning is the finding.** The monitor logged 1738
+points over the whole field, so cells still hold a median of one observation at
+8 m, and by the time they hold three the plots are being straddled and purity
+has collapsed to 0.11. There is no cell size at which this dataset gives both
+well-supported and treatment-pure cells; a 2001 monitor simply did not log fast
+enough.
+
+Relaxing the floor until something passes would only hide that. Dropping
+`min_obs` to 1 makes 5 m "qualify", but at 5 m every occupied cell holds exactly
+one point and gridding has done nothing except rename the observations.
+
+So 8 m is used below as a deliberate compromise rather than a recommendation:
+it is close to the swath width, keeps purity at 0.81, and doubles coverage over
+5 m. The consequence travels with it -- cell means resting on one or two pings
+are noisier than a modern monitor's would be, so the dense layer is weaker here
+than the method assumes, and the baseline model has less to work with.
 
 The collapse in purity above 8 m is informative: it says the treatment units in
 this trial are narrow. They are — all six nitrogen levels appear across the full

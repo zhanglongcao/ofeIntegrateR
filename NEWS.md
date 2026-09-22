@@ -18,6 +18,40 @@ First release.
   both cases can be tested. The settings and the realised component variances
   are attached as `attr(, "truth")`.
 
+* `clean_yield_monitor()` removes the points a harvester records but does not
+  measure, which the package had no step for at all: `grid_dense_layer()`
+  assumed the cloud it was given was already sound. It applies a dropout rule,
+  a robust global outlier rule, a local one that compares each point with its
+  own neighbourhood, a speed rule, a grain-flow rule that trims the ends of
+  every pass, and a headland buffer, attributing each removal to the rule that
+  caught it. `drop = FALSE` returns every row with the verdict attached, which
+  `ofe_map()` will draw.
+
+  Averaging does not fix it, which is the tempting argument. Two of the defects
+  are systematic -- the opening metres of every pass read low and the closing
+  metres high, at the same two edges of the paddock -- so gridding preserves
+  them and passes them to the model as a spatial trend along the direction of
+  travel. Whether that trend reaches the treatment estimate depends on the
+  geometry: passes running along the strips put each pass inside one treatment
+  and the fault falls equally, and on simulated trials of that shape cleaning
+  moves the contrast by about a percentage point; passes running across the
+  strips do not, and there the trend becomes a treatment effect.
+
+  `simulate_yield_monitor(defects = TRUE)` generates a cloud whose damaged
+  points are labelled, so a cleaning rule can be scored rather than eyeballed.
+  Scored that way: 97% of depressed pass starts and 90% of inflated pass ends
+  removed for 1% of the sound points, and on data in physical units 94% of
+  injected outliers. The simulator also now records a pass id, recording order
+  and ground speed, as a real monitor file does; `defects` is off by default so
+  nothing that existed before changed.
+
+* `choose_cell_size()` evaluates a range of cell sizes for
+  `grid_dense_layer()` and reports what each trades away: detail against
+  observations per cell and against the share of cells lying wholly inside one
+  treatment. It recommends the smallest size meeting both floors, and says so
+  in `attr(, "rule")` rather than presenting the choice as a fact. The
+  `real-data` article had been doing this with a hand-written loop.
+
 * `ofe_variogram()` fits and draws the variogram, which the package had been
   kriging from without ever showing. It bins every pair of samples by distance,
   fits exponential, spherical and Gaussian models by a constrained search, and

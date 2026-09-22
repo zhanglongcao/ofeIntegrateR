@@ -32,6 +32,15 @@
 #' @param point_design `"random"` spreads samples over the trial;
 #'   `"strip_ends"` places them at both ends of every strip, the pattern growers
 #'   commonly use when each sample is expensive to collect.
+#' @param defects Logical or a named list; add the faults a real monitor file
+#'   carries, and label each damaged point in a `defect` column so a cleaning
+#'   rule can be scored rather than eyeballed. `FALSE` (default) leaves the
+#'   cloud sound. `TRUE` uses settings in the range reported for commercial
+#'   monitors: the opening and closing 12 m of each pass read low and high as
+#'   grain reaches the sensor (`ramp_m`, `ramp_low`, `ramp_high`), the machine
+#'   slows into each turn (`slow_m`, `slow_factor`), and 2% of readings are
+#'   dropouts or spikes (`outlier_prob`, `spike_factor`). A named list
+#'   overrides any of those.
 #' @param truth_res Resolution (m) of the grid on which the point-source surface
 #'   is simulated before being read off at the recorded locations.
 #' @param seed Optional integer seed.
@@ -67,6 +76,7 @@ simulate_yield_monitor <- function(field_x = 240,
                                     n_point_samples = 30L,
                                     point_obs_noise_sd = 0.3,
                                     point_design = c("random", "strip_ends"),
+                                    defects = FALSE,
                                     truth_res = 3,
                                     seed = NULL) {
   point_design <- match.arg(point_design)
@@ -99,9 +109,16 @@ simulate_yield_monitor <- function(field_x = 240,
     stop("All passes were skipped; lower `skip_pass_prob`.", call. = FALSE)
   }
   along <- seq(0, field_x, by = along_spacing)
-  cloud <- do.call(rbind, lapply(pass_centres, function(yc) {
-    data.frame(x = along, y = yc + stats::rnorm(length(along), 0, gps_jitter))
+  # A harvester drives alternate passes in opposite directions, and the file
+  # arrives in recording order. Both matter to anything that has to work out
+  # where a pass starts and ends, so they are simulated rather than assumed.
+  cloud <- do.call(rbind, lapply(seq_along(pass_centres), function(i) {
+    yc <- pass_centres[i]
+    xs <- if (i %% 2L == 0L) rev(along) else along
+    data.frame(pass = i, x = xs,
+               y = yc + stats::rnorm(length(xs), 0, gps_jitter))
   }))
+  cloud$speed <- stats::rnorm(nrow(cloud), 1.6, 0.08)
 
   band_width <- swath * band_swaths
   band_idx <- floor(cloud$y / band_width)
@@ -119,6 +136,48 @@ simulate_yield_monitor <- function(field_x = 240,
   cloud$yield <- treat_effects[as.character(cloud$treat)] +
     dense_var_weight * cloud$point_true +
     stats::rnorm(nrow(cloud), 0, noise_sd)
+
+  # Every point is sound until a defect is applied, and each defect records
+  # itself. Without that label a cleaning routine can only be eyeballed; with
+  # it, how much of the damage a rule actually finds can be measured.
+  cloud$defect <- NA_character_
+  if (!isFALSE(defects)) {
+    spec <- .ym_defect_spec(defects)
+    cloud <- cloud[order(cloud$pass, seq_len(nrow(cloud))), , drop = FALSE]
+
+    for (p in unique(cloud$pass)) {
+      i <- which(cloud$pass == p)
+      if (length(i) < 6L) next
+      d_along <- abs(cloud$x[i] - cloud$x[i][1])
+      # Grain takes a few seconds to reach the sensor, so the opening metres of
+      # a pass read low and the closing metres read high.
+      lead <- i[d_along <= spec$ramp_m]
+      tail_i <- i[d_along >= max(d_along) - spec$ramp_m]
+      if (length(lead)) {
+        cloud$yield[lead] <- cloud$yield[lead] * spec$ramp_low
+        cloud$defect[lead] <- "pass_start"
+      }
+      if (length(tail_i)) {
+        cloud$yield[tail_i] <- cloud$yield[tail_i] * spec$ramp_high
+        cloud$defect[tail_i] <- "pass_end"
+      }
+      # The machine slows into the turn at each end of the pass.
+      slow <- i[d_along <= spec$slow_m | d_along >= max(d_along) - spec$slow_m]
+      cloud$speed[slow] <- cloud$speed[slow] * spec$slow_factor
+    }
+
+    n <- nrow(cloud)
+    hit <- sample.int(n, max(0L, round(spec$outlier_prob * n)))
+    if (length(hit)) {
+      zero <- hit[seq_len(round(length(hit) / 2))]
+      spike <- setdiff(hit, zero)
+      cloud$yield[zero] <- 0
+      cloud$yield[spike] <- cloud$yield[spike] * spec$spike_factor
+      cloud$defect[hit] <- "outlier"
+    }
+    rownames(cloud) <- NULL
+  }
+  cloud$seq <- seq_len(nrow(cloud))
   rownames(cloud) <- NULL
 
   if (point_design == "strip_ends") {
@@ -145,4 +204,27 @@ simulate_yield_monitor <- function(field_x = 240,
   rownames(pts) <- NULL
 
   list(cloud = cloud, point_samples = pts, true_effects = treat_effects)
+}
+
+#' Defect settings for simulate_yield_monitor()
+#'
+#' `defects = TRUE` gives values in the range reported for commercial monitors;
+#' a named list overrides any of them.
+#' @keywords internal
+#' @noRd
+.ym_defect_spec <- function(defects) {
+  d <- list(ramp_m = 12, ramp_low = 0.55, ramp_high = 1.35,
+            slow_m = 8, slow_factor = 0.45,
+            outlier_prob = 0.02, spike_factor = 4)
+  if (isTRUE(defects)) return(d)
+  if (!is.list(defects)) {
+    stop("`defects` must be TRUE, FALSE, or a named list of settings.",
+         call. = FALSE)
+  }
+  unknown <- setdiff(names(defects), names(d))
+  if (length(unknown) > 0L) {
+    stop("Unknown `defects` setting(s): ", paste(unknown, collapse = ", "),
+         ". Available: ", paste(names(d), collapse = ", "), ".", call. = FALSE)
+  }
+  utils::modifyList(d, defects)
 }

@@ -1,14 +1,5 @@
 # ofeIntegrateR
 
-<!-- badges: start -->
-<!-- R-CMD-check is paused while the repository is private; see the note in
-     .github/workflows/R-CMD-check.yaml. Restore this badge when it is
-     re-enabled -- a badge showing the status of an old run would claim the
-     current code had been checked when it had not.
-[![R-CMD-check](https://github.com/zhanglongcao/ofeIntegrateR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zhanglongcao/ofeIntegrateR/actions/workflows/R-CMD-check.yaml)
--->
-<!-- badges: end -->
-
 A workflow for on-farm experimentation (OFE) strip trials: lay out the design,
 plan the sampling, get the yield monitor's point cloud onto an estimable
 lattice, find the zones, fit the spatial model, and report the means. Every step
@@ -32,6 +23,8 @@ Documentation: <https://www.zcao.space/ofeIntegrateR/>
 | Lay out the trial: strip or stacked, randomised or systematic | `make_trial_design()` |
 | Work out how many cores a target precision needs | `kriging_sample_interval()` |
 | Decide where the cores go | `place_point_samples()` |
+| Clean the raw yield-monitor file | `clean_yield_monitor()` |
+| Pick a cell size from the data rather than by convention | `choose_cell_size()` |
 | Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
 | Fit and draw the variogram of a sampled layer | `ofe_variogram()` |
 | Interpolate that layer onto the lattice | `krige_point_samples()` |
@@ -76,6 +69,45 @@ wald_tests(fit)
 ofe_lsd(fit, "treat")
 plot(fit)
 ```
+
+## Clean the file before gridding it
+
+A file straight off a harvester is not measurement everywhere. The opening
+metres of every pass read low while grain is still reaching the sensor, the
+closing metres read high, the machine slows into every turn, and a scatter of
+points are zero or several times the crop.
+
+```r
+clean <- clean_yield_monitor(raw, pass = "pass", order = "time",
+                             speed = "speed", pass_trim = 12,
+                             min_yield = 0, local_mad = 3)
+attr(clean, "cleaning")       # what each rule removed
+
+# or keep every row and see where the removals were
+audit <- clean_yield_monitor(raw, ..., drop = FALSE)
+ofe_map(audit, ".reason")
+```
+
+Averaging does not fix it. Two of those defects are **systematic**: the low
+readings are at the start of every pass and the high ones at the end, so
+gridding preserves them and hands the model a trend along the direction of
+travel. Only the random outliers are diluted by averaging, and they matter
+least.
+
+Whether that trend reaches the treatment estimate depends on the geometry. When
+passes run along the strips, every pass sits inside one treatment and the fault
+falls equally on all of them — on simulated trials laid out that way, cleaning
+moves the recovered contrast by about a percentage point. When passes run across
+the strips it does not fall equally, and the trend becomes a treatment effect.
+Clean either way, since the cost is small and the direction of harvest is not
+always yours to choose.
+
+Scored against `simulate_yield_monitor(defects = TRUE)`, which labels every
+point it damages: 97% of the depressed pass starts and 90% of the inflated pass
+ends removed, for 1% of the sound points. On data in physical units, where
+`min_yield = 0` applies, 94% of the injected outliers go too — against 39% for
+a dispersion rule alone, because a dropout reading of zero is not far enough
+from the median to trip one.
 
 ## Two kinds of zone, for two different questions
 

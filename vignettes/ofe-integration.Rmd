@@ -60,7 +60,7 @@ that is rarely a rectangle, and with the occasional pass missing.
 you would actually run.
 
 ```{r}
-sim <- simulate_yield_monitor(n_point_samples = 30, seed = 11)
+sim <- simulate_yield_monitor(n_point_samples = 30, seed = 11, defects = TRUE)
 
 nrow(sim$cloud)
 head(sim$cloud, 3)
@@ -68,6 +68,57 @@ sim$true_effects
 ```
 
 The contrast we are trying to recover is **C − A = 1.6**.
+
+`defects = TRUE` also gives the cloud the faults a real file has, and labels
+them, so the next step can be checked rather than trusted:
+
+```{r}
+table(sim$cloud$defect, useNA = "no")
+```
+
+## Step 0 — clean the file
+
+The opening metres of each pass read low while grain is still reaching the
+sensor, the closing metres read high, the machine slows into every turn, and a
+scatter of readings are zero or several times the crop.
+
+```{r}
+clean <- clean_yield_monitor(sim$cloud, pass = "pass", order = "seq",
+                             speed = "speed", pass_trim = 12, local_mad = 3)
+attr(clean, "cleaning")
+```
+
+It is tempting to skip this and let gridding average the noise away. That works
+for the random outliers and not for the rest: the pass-end faults are
+*systematic*, with the low readings at the start of every pass and the high ones
+at the end, so averaging preserves them and hands the model a trend running
+along the direction of travel.
+
+Whether that trend reaches the treatment estimate depends on how the passes lie
+against the strips. Here they run **along** the strips, so every pass sits
+wholly inside one treatment and the fault falls equally on all of them: across
+six simulated trials, cleaning moves the recovered contrast by about one
+percentage point. Where passes run **across** the strips it does not fall
+equally, and that is when the trend becomes a treatment effect. Clean either
+way — the cost is small and you do not always control the direction of
+harvest — but do not expect the contrast to move much when the geometry is
+kind.
+
+Because the simulator labelled what it damaged, the rules can be scored:
+
+```{r}
+truth <- ifelse(is.na(sim$cloud$defect), "clean", sim$cloud$defect)
+audit <- clean_yield_monitor(sim$cloud, pass = "pass", order = "seq",
+                             speed = "speed", pass_trim = 12, local_mad = 3,
+                             drop = FALSE)
+round(tapply(!audit$.keep, truth, mean), 2)
+```
+
+Most of the pass-end damage goes and very few sound points go with it. The
+outliers fare worse: half of them are dropouts reading zero, which is not far
+enough from the median to trip a dispersion threshold. On data in physical units
+you would add `min_yield = 0`, which is off by default because the function
+cannot see the units.
 
 ## Step 1 — put the dense layer on an estimable lattice
 
@@ -77,7 +128,7 @@ and — importantly — keeps cells that contain no observations as missing valu
 rather than dropping them.
 
 ```{r}
-g <- grid_dense_layer(sim$cloud, response = "yield", treat = "treat",
+g <- grid_dense_layer(clean, response = "yield", treat = "treat",
                       cell_size = 9)
 
 dim(g)
