@@ -279,6 +279,56 @@ First release.
 
 ## Bug fixes
 
+* `kriging_sample_interval()` passed the practical range to `gstat::vgm()` as
+  the model's range parameter. For the exponential model that parameter is a
+  third of the practical range, so spatial correlation was treated as
+  reaching three times further than it does: intervals came out too wide and
+  sample counts too small (by up to a factor of about nine). The practical
+  range is now converted (divided by 3 for `Exp`, by `sqrt(3)` for `Gau`)
+  before the kriging variance is computed.
+
+* `fit_integrated_joint(engine = "sommer")` gave wrong estimates for the
+  sparse layer. It passed `naMethodY = "include"` to `sommer::mmer()`, which
+  fills every missing response with the trait median, so a layer observed in
+  a few dozen of several hundred cells was mostly imputed values: its
+  treatment effects shrank towards zero and its standard errors collapsed
+  (in one check, effects of 0.3 and 0.5 were estimated as 0.05 and 0.07).
+  The sommer engine now accepts only a lattice on which both layers are
+  observed in every cell, and says so otherwise; a sparse layer needs
+  `engine = "asreml"`.
+
+* `fit_integrated_joint()` borrowed nothing from the second layer. It fitted a
+  shared `diag(layer):id(unit)` random effect with independent residuals per
+  layer. With one observation per cell and layer, that unit effect is
+  confounded with the residual, and the `diag` form has no cross-covariance.
+  So the default fit reproduced a univariate i.i.d. analysis of the dense layer
+  exactly, and lost that layer's spatial structure too. In simulation its
+  contrast SD was 30--40% larger than the free AR1xAR1 baseline, and its 95%
+  intervals covered 70--80% of the time. The `us(layer)` alternative converged
+  in under 11% of trials.
+
+  The function now fits the two layers as correlated traits, each with its
+  own treatment effects, with the cross-covariance in the residual where it
+  is identifiable: `ar1(row):ar1(col):us(trait)` with asreml, or
+  `units:us(trait)` (`residual = "id"`) with sommer. Giving both layers
+  treatment effects means an auxiliary layer that responds to treatment
+  (NDVI after nitrogen, say) cannot absorb the response's treatment effect.
+  Conditioning is on each layer's deviations from its own treatment means,
+  which is the model-based form of centring a covariate within plots.
+
+  The model gains most when the *response* is sparse and the auxiliary layer
+  dense: hand cuts or grain protein with NDVI or the yield monitor alongside.
+  In simulation, the treatment-contrast SD of the sparse response fell by
+  16--38%, with nominal coverage and every fit converging, and two cuts per
+  strip plus NDVI beat four cuts alone. With a dense response and a sparse
+  covariate the gain over the spatial baseline is a few percent, and
+  `fit_integrated_kriged()` remains the cheaper choice.
+
+  `cor_structure` and `min_point_n_for_us` are removed (passing them is an
+  error that says why). New arguments: `block`, `residual` and `min_overlap`.
+  Point samples that fall off the lattice are dropped with a warning, and
+  samples sharing a cell are averaged.
+
 * `fit_integrated_kriged()` silently dropped all but the first covariate when
   passed more than one, because the formula was built with a vectorised
   `paste()` and no `collapse`. The extra covariates are now included.

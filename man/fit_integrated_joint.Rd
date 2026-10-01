@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit-joint.R
 \name{fit_integrated_joint}
 \alias{fit_integrated_joint}
-\title{Fit a joint bivariate spatial model for dense and point-source data}
+\title{Fit a joint bivariate spatial model for a dense and a sparse layer}
 \usage{
 fit_integrated_joint(
   grid,
@@ -10,132 +10,151 @@ fit_integrated_joint(
   response_dense,
   response_point,
   treat = "treat",
+  block = NULL,
   row = "row",
   col = "col",
   engine = c("asreml", "sommer"),
-  cor_structure = c("independent", "unstructured"),
-  min_point_n_for_us = 30,
+  residual = NULL,
+  min_overlap = 10,
   maxit = 60,
   ai_sing = TRUE,
   ...
 )
 }
 \arguments{
-\item{grid}{Data frame, one row per grid location, with the dense
-response, treatment factor, and row/column position columns (as
-produced by \code{\link[=simulate_ofe_trial]{simulate_ofe_trial()}}'s \code{grid} element).}
+\item{grid}{Data frame, one row per cell of a \strong{complete} row-by-column
+lattice (as returned by \code{\link[=grid_dense_layer]{grid_dense_layer()}} with \code{keep_empty = TRUE}),
+holding the dense layer, the treatment factor and the position columns.}
 
-\item{point_samples}{Data frame of sparse point-source observations with
-row/column position columns and the point-source value column (as
-produced by \code{\link[=simulate_ofe_trial]{simulate_ofe_trial()}}'s \code{point_samples} element).}
+\item{point_samples}{Data frame of the sparse layer, with \code{row}/\code{col}
+position columns on the same lattice as \code{grid} and the sparse value
+column. Several samples in one cell are averaged.}
 
-\item{response_dense}{Character; name of the dense response column in
-\code{grid} (e.g. yield).}
+\item{response_dense}{Character; name of the dense layer's column in
+\code{grid}.}
 
-\item{response_point}{Character; name of the point-source value column
-in \code{point_samples} (e.g. soil, tissue, or disease measurement).}
+\item{response_point}{Character; name of the sparse layer's column in
+\code{point_samples}.}
 
-\item{treat}{Character; name of the treatment factor column in \code{grid}.
-The treatment effect is estimated from the dense layer only.}
+\item{treat}{Character; name of the treatment factor column in \code{grid}.}
+
+\item{block}{Optional character; name of a blocking factor in \code{grid}
+(e.g. replicate), fitted as a fixed effect within each trait.}
 
 \item{row, col}{Character; names of the row/column position columns,
 shared between \code{grid} and \code{point_samples}.}
 
-\item{engine}{Character; \code{"asreml"} (default) fits the model via
-\code{asreml::asreml()} — requires a licensed copy of asreml-R. \code{"sommer"}
-fits an open-source (CRAN-only, no licence required) analogue via
-\code{sommer::mmer()}: the dense and point-source responses are modelled as
-two traits in a multi-trait model sharing a random effect per grid
-location (\code{vsr(unit, Gtc = ...)}), with the treatment effect estimated
-separately for each trait (only the dense-trait estimate is
-meaningful; see Details).}
+\item{engine}{\code{"asreml"} (default; requires a licence) or \code{"sommer"}
+(open source). sommer accepts only a lattice on which both layers are
+observed in every cell: \code{sommer::mmer()} imputes a missing response with
+its median or drops the cell, which gives wrong estimates for a sparse
+layer, so a sparse layer needs asreml.}
 
-\item{cor_structure}{Character; \code{"independent"} (default) fits
-\code{diag(layer):id(unit)} (asreml) or \code{vsr(unit, Gtc = diag(2))} (sommer),
-i.e. separate spatial variances for the dense and point-source layers
-with no cross-covariance — robust when point samples are sparse.
-\code{"unstructured"} fits \code{us(layer):id(unit)} (asreml) or
-\code{vsr(unit, Gtc = unsm(2))} (sommer), which additionally estimates the
-spatial cross-covariance between layers (how strongly point-source
-spatial pattern informs the dense response), but is often
-unidentifiable below \code{min_point_n_for_us} observations.}
+\item{residual}{\code{"ar1"} fits the separable bivariate spatial residual
+\code{ar1(row):ar1(col):us(trait)}: the dense layer carries the AR1
+parameters, and \code{us(trait)} carries the cross-covariance. \code{"id"} fits
+\code{units:us(trait)}, the non-spatial version, which is equivalent to an
+analysis of covariance on the within-plot deviations. Defaults to \code{"ar1"}
+for asreml and \code{"id"} for sommer, which cannot fit the spatial form.}
 
-\item{min_point_n_for_us}{Integer; minimum number of non-missing
-point-source observations below which a warning is issued when
-\code{cor_structure = "unstructured"}.}
+\item{min_overlap}{Integer; a warning is issued when fewer cells than this
+carry both layers, since those cells are all the cross-covariance is
+estimated from.}
 
-\item{maxit}{Maximum number of asreml iterations. Ignored when
-\code{engine = "sommer"}.}
+\item{maxit}{Maximum number of asreml iterations. Ignored for sommer.}
 
-\item{ai_sing}{Logical; if \code{TRUE} (default), temporarily set the
-session-level \code{asreml.options(ai.sing = TRUE)} for the duration of
-this fit (restored to its previous value on exit), so that
-singularities in the Average Information matrix do not abort
-estimation. In testing, the layer-sharing random effect (even with
-\code{cor_structure = "independent"}) can trigger this with sparse
-point-source data, so it is enabled by default. Ignored when
-\code{engine = "sommer"}.}
+\item{ai_sing}{Logical; if \code{TRUE} (default), set
+\code{asreml.options(ai.sing = TRUE)} for the duration of the fit (restored on
+exit). Ignored for sommer.}
 
-\item{...}{Additional arguments passed to \code{asreml::asreml()} or
+\item{...}{Further arguments passed to \code{asreml::asreml()} or
 \code{sommer::mmer()}.}
 }
 \value{
-A fitted \code{asreml} or \code{mmer} model object. Treatment contrasts
-for the dense layer can be retrieved with \code{\link[=extract_fixed_effects]{extract_fixed_effects()}}
-(look for terms matching \verb{at(layer, "dense"):<treat>} for asreml, or
-\verb{<response_dense>:<treat><level>} for sommer).
+A fitted \code{asreml} or \code{mmer} object. Read the contrasts with
+\code{\link[=extract_fixed_effects]{extract_fixed_effects()}}. With asreml the treatment terms are named
+\verb{at(trait, <response>):<treat>_<level>}; with sommer,
+\verb{<response>:<treat><level>}. The first treatment level is the reference,
+so each estimate is a contrast against it, and its standard error is the
+SED.
 }
 \description{
-Implements the "joint model" data integration strategy: rather than
-pre-kriging the point-source variable and using it as a fixed covariate
-(see \code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}}), the dense response and the point-source
-measurements are fitted \strong{jointly} as two stacked response "layers"
-sharing a spatial random effect at each grid location. This lets sparse
-point samples directly inform the dense response's spatial structure
-(and vice versa) without a separate kriging step.
+Implements the "joint model" data integration strategy. The dense layer
+(e.g. yield-monitor yield, NDVI) and the sparse layer (e.g. soil cores,
+hand-harvest cuts, grain protein) are modelled as two correlated traits,
+each with its own treatment effects, on the same lattice. The sparse layer
+is missing at every cell that was not sampled.
 }
 \details{
-For \code{engine = "asreml"}, residuals are modelled with
-\code{dsum(~units | layer)}, i.e. separate i.i.d. residual variances per
-layer. An \code{ar1(row):ar1(col)} residual was found to be unidentifiable
-for the point-source layer in testing, because a handful of sparse,
-irregularly placed observations cannot support a full spatial
-autocorrelation structure on their own; the shared random effect
-(\code{diag(layer)} or \code{us(layer)}) is what carries spatial information
-between layers instead.
+Precision is gained through the conditional distribution. If the two
+layers' residuals at a cell are bivariate normal with correlation
+\eqn{\rho}, the residual of one given the other has variance
+\eqn{\sigma^2(1-\rho^2)}. The model therefore borrows strength only through
+the residual cross-covariance, and the borrowing mostly flows \emph{from} the
+dense layer \emph{to} the sparse one. The practical consequence:
+\itemize{
+\item \strong{Sparse response, dense auxiliary layer} -- for example protein or
+hand cuts with NDVI or the yield monitor alongside. This is where the model
+earns its keep: in simulation, the treatment-contrast SD of the sparse
+response fell by 16--38\% relative to analysing it alone, with nominal
+coverage.
+\item \strong{Dense response, sparse covariate} -- for example yield with 30 soil
+cores. The dense layer already carries almost all the information, and
+the gain over the free spatial baseline was within a few percent. Here
+\code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}} does as well and is cheaper.
+}
 
-For \code{engine = "sommer"}, the same idea is expressed as a multi-trait
-model (\code{cbind(dense, point) ~ treat}) with a shared random effect per
-grid location (\code{unit}) and heterogeneous, uncorrelated residual
-variances per trait (\code{vsr(units, Gtc = diag(2))}). sommer estimates the
-treatment effect separately for \emph{each} trait by default; the
-point-source trait's treatment estimate is not meaningful (point
-samples carry no treatment information of their own) and should be
-ignored — only the dense-trait estimate is the quantity of interest.
-Rows are kept even when only one of the two responses is observed via
-\code{naMethodY = "include"}. In testing against simulated data, this
-sommer-based fit reproduced the asreml \code{cor_structure = "independent"}
-treatment-contrast estimates almost exactly.
+Both layers are given treatment effects. That is required when the
+auxiliary layer responds to treatment (NDVI after a nitrogen treatment,
+say): conditioning is then on the deviations from each layer's own
+treatment means, so the auxiliary layer cannot absorb the treatment effect
+of the response. This is the model-based counterpart of centring a
+covariate within plots (Piepho et al.), and it needs no centring by hand.
+For a pre-treatment layer the extra treatment terms cost a few degrees of
+freedom and nothing else.
+
+Earlier versions fitted a shared \code{diag(layer):id(unit)} or
+\code{us(layer):id(unit)} random effect with independent residuals per layer.
+With one observation per cell and layer, that unit effect is confounded
+with the residual. The \code{diag} form therefore had no cross-covariance at all,
+and reproduced a univariate i.i.d. analysis of the dense layer exactly,
+without its spatial structure. The \code{us} form converged in under 11\% of
+simulated trials. Both are removed.
+
+A plot-level cross-covariance (\code{plot:us(trait)}, as in a split-plot
+bivariate model) is deliberately not offered. Once treatment and block are
+fitted, strip trials leave almost no between-strip variation, the plot-level
+covariance sits on the boundary, and the fit converged in about half of
+simulated trials without improving precision.
 }
 \examples{
 if (requireNamespace("asreml", quietly = TRUE)) {
-  sim <- simulate_ofe_trial(n_row = 20, n_col = 10, n_point_samples = 12, seed = 1)
+  sim <- simulate_ofe_trial(n_row = 20, n_col = 12, n_point_samples = 30, seed = 1)
   fit <- fit_integrated_joint(sim$grid, sim$point_samples,
-                               response_dense = "dense_response",
-                               response_point = "point_obs")
-  extract_fixed_effects(fit)
+                              response_dense = "dense_response",
+                              response_point = "point_obs")
+  fx <- extract_fixed_effects(fit)
+  fx[grepl("dense_response):treat", fx$term), ]
 }
 
+# sommer fits the non-spatial model when both layers cover every cell,
+# e.g. a yield map and an NDVI map on the same lattice
 if (requireNamespace("sommer", quietly = TRUE)) {
-  # sommer's multi-trait model needs more point-source observations than
-  # asreml's to avoid a singular system; a sparser grid like the asreml
-  # example above is not guaranteed to converge.
-  sim <- simulate_ofe_trial(n_row = 30, n_col = 21, n_point_samples = 25, seed = 11)
-  fit <- fit_integrated_joint(sim$grid, sim$point_samples,
-                               response_dense = "dense_response",
-                               response_point = "point_obs",
-                               engine = "sommer")
+  sim <- simulate_ofe_trial(n_row = 20, n_col = 12, seed = 11)
+  both <- sim$grid[, c("row", "col", "point_true")]
+  fit <- fit_integrated_joint(sim$grid, both,
+                              response_dense = "dense_response",
+                              response_point = "point_true",
+                              engine = "sommer", min_overlap = 0)
   extract_fixed_effects(fit)
 }
 
+}
+\references{
+Piepho, H.-P. et al. (2026). Improving yield estimates in on-farm
+experiments using vegetation indices as covariates. Manuscript under review.
+}
+\seealso{
+\code{\link[=fit_integrated_kriged]{fit_integrated_kriged()}} for the dense-response, sparse-covariate
+case.
 }

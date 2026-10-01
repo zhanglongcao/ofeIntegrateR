@@ -1,0 +1,66 @@
+Online License checked out Tue Sep 29 18:45:33 2026
+
+== 1. REML engine: fit_ofe vs asreml ==
+[PASS] fit_ofe        AR1xAR1 seed 1: row correlation                               0.26904 vs    0.26908
+[PASS] fit_ofe        AR1xAR1 seed 1: col correlation                               0.42583 vs    0.42579
+[PASS] fit_ofe        AR1xAR1 seed 1: residual variance (rel.)                   0.00010875 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 1: treatment effects (max rel.)                6.466e-05 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 1: treatment SEs (max rel.)                   7.3163e-05 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 2: row correlation                               0.35634 vs    0.35633
+[PASS] fit_ofe        AR1xAR1 seed 2: col correlation                               0.34067 vs    0.34059
+[PASS] fit_ofe        AR1xAR1 seed 2: residual variance (rel.)                   0.00058835 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 2: treatment effects (max rel.)               6.0823e-05 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 2: treatment SEs (max rel.)                   0.00094496 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 3: row correlation                               0.45101 vs    0.45102
+[PASS] fit_ofe        AR1xAR1 seed 3: col correlation                               0.44051 vs    0.44047
+[PASS] fit_ofe        AR1xAR1 seed 3: residual variance (rel.)                   0.00023383 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 3: treatment effects (max rel.)               0.00013889 vs          0
+[PASS] fit_ofe        AR1xAR1 seed 3: treatment SEs (max rel.)                   0.00025727 vs          0
+[PASS] fit_ofe        random rep + AR1xAR1: treatment effects (max rel.)         0.00011845 vs          0
+[PASS] fit_ofe        random rep + AR1xAR1: treatment SEs (max rel.)             0.00020835 vs          0
+[PASS] fit_ofe        random rep: REML logLik gain AR1xAR1 over id, vs asreml        128.66 vs     128.66
+[PASS] fit_ofe        dsum by zone: section variances (max rel.)                 7.7284e-05 vs          0
+[PASS] fit_ofe        dsum by zone: zone:treat effects (max rel.)                0.00011713 vs          0
+[PASS] fit_ofe        id residual: coefficients equal lm (max abs.)              3.7748e-15 vs          0
+[PASS] fit_ofe        id residual: SEs equal lm (max abs.)                       2.6368e-16 vs          0
+
+== 2. Means, SEDs, Wald tests, letters ==
+[PASS] ofe_means      predicted means (max abs.)                                 9.1712e-06 vs          0
+[PASS] ofe_means      pairwise SEDs vs asreml predict (max rel.)                 5.4801e-05 vs          0
+[PASS] wald_tests     treatment Wald statistic vs asreml (rel.)                  0.00033496 vs          0
+[PASS] ofe_lsd        letters agree with pairwise p-values (share of pairs)               1 vs          1
+
+== 3. Monte Carlo: bias, coverage, type I error ==
+[PASS] fit_ofe MC     null: type I error of treatment Wald test                        0.07 vs       0.05
+[PASS] fit_ofe MC     C-A contrast: bias / true effect                             -0.01746 vs          0
+[PASS] fit_ofe MC     C-A contrast: 95% CI coverage                                    0.93 vs       0.95
+[PASS] fit_ofe MC     C-A contrast: mean SE / empirical SD                          0.95401 vs          1
+
+== 4. Variogram, kriging, sample interval ==
+[PASS] ofe_variogram  median practical range (true 30)                               26.459 vs         30
+[PASS] ofe_variogram  median nugget (true 0.2)                                      0.20631 vs        0.2
+[PASS] ofe_variogram  median total sill (true 1.2)                                   1.1966 vs        1.2
+[PASS] krige_point_samples RMSE / oracle-kriging RMSE (median)                            1.0233 vs          1
+[PASS] krige_point_samples 95% prediction-interval coverage (median)                     0.93448 vs       0.95
+[PASS] krige_point_samples SD of standardised prediction errors (median)                  1.0525 vs          1
+[PASS] cv_krige_surface RMSE equals gstat::krige.cv                                   0.72472 vs    0.72472
+[PASS] kriging_sample_interval relative kriging SE at chosen interval                        0.67454 vs    0.67454
+[PASS] kriging_sample_interval floor equals sqrt(nugget / sill)                              0.40825 vs    0.40825
+[PASS] kriging_sample_interval achieved rel. SE does not exceed target                       0.67454 vs        0.7
+
+== 5. Gridding and cleaning ==
+[PASS] grid_dense_layer observations conserved (sum n_obs = nrow cloud)                  1745 vs       1745
+[PASS] grid_dense_layer n_obs-weighted mean of cell means = cloud mean                0.48583 vs    0.48583
+[PASS] grid_dense_layer complete lattice (rows x cols = cells)                            324 vs        324
+[FAIL] clean_yield_monitor recall of labelled defects                                    0.61233 vs          1
+[PASS] clean_yield_monitor share of good points removed                                0.0026543 vs          0
+[PASS] clean_yield_monitor recall: outlier                                                    NA vs          1
+[PASS] clean_yield_monitor recall: pass_start                                                 NA vs          1
+[PASS] clean_yield_monitor recall: pass_end                                                   NA vs          1
+
+== 6. Integration fits ==
+[PASS] fit_integrated_kriged treatment C: ofe engine vs asreml engine (rel.)            1.0568e-06 vs          0
+[PASS] fit_integrated_kriged covariate slope: ofe vs asreml (rel.)                      8.4544e-06 vs          0
+[PASS] compare_integration returns baseline and integrated estimates                           7 vs          1
+[PASS] fit_integrated_joint complete layers: sommer vs asreml, treatment C (rel.)      6.0011e-14 vs          0
+[PASS] fit_integrated_joint sommer refuses a sparse layer                                       1 vs          1

@@ -119,4 +119,5 @@ articles:
   navbar: ~
   contents:
   - ofe-integration
+  - worked-examples
   - real-data

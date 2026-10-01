@@ -462,10 +462,42 @@ planning:
 
 ## The joint bivariate model
 
-`fit_integrated_joint()` models the dense and point layers together with a
-shared spatial random effect, estimating their cross-covariance instead of
-treating the kriged surface as known. It is the right choice when that
-covariance is itself of interest, but it needs an unstructured cross-covariance
-to inform the treatment effect at all, and that is hard to estimate from sparse
-point data. For routine treatment-effect work the kriged-covariate route is the
-dependable default.
+`fit_integrated_joint()` models the two layers as correlated traits on the
+same lattice, each with its own treatment effects. The residual is
+`ar1(row):ar1(col):us(trait)`: the dense layer carries the spatial parameters,
+and `us(trait)` carries the cross-covariance. Nothing is kriged. A cell without
+a point sample simply has that trait missing.
+
+It helps through the conditional distribution. If the two residuals at a cell
+have correlation $\rho$, one residual given the other has variance
+$\sigma^2(1-\rho^2)$. So the model borrows through $\rho$, and mostly *from*
+the dense layer *to* the sparse one. That decides where it is worth fitting:
+
+- **Sparse response, dense auxiliary layer** (hand cuts or grain protein, with
+  NDVI or the yield monitor alongside). This is the case it is built for. In
+  simulation, the sparse response's contrast SD fell by 16--38% relative to
+  analysing it alone. Two cuts per strip plus NDVI beat four cuts without it.
+- **Dense response, sparse covariate** (yield with a few dozen soil cores). The
+  dense layer already holds nearly all the information, and the gain over the
+  spatial baseline is a few percent. The kriged-covariate route above does as
+  well and is cheaper.
+
+Both layers get treatment effects deliberately. An auxiliary layer measured
+after treatment, such as mid-season NDVI, carries the treatment effect too. As
+a raw covariate it would absorb most of the response's treatment effect. In
+the joint model each layer is conditioned on its deviations from its own
+treatment means, so that cannot happen.
+
+```{r joint, eval = requireNamespace("asreml", quietly = TRUE)}
+tr <- simulate_ofe_trial(n_row = 30, n_col = 21, n_point_samples = 40, seed = 11)
+fit_j <- fit_integrated_joint(tr$grid, tr$point_samples,
+                              response_dense = "dense_response",
+                              response_point = "point_obs")
+fx <- extract_fixed_effects(fit_j)
+fx[grepl("treat", fx$term), ]
+```
+
+A sparse layer needs asreml. `engine = "sommer"` fits the non-spatial form,
+`units:us(trait)`, only when both layers cover every cell (a yield map and an
+NDVI map, say): `sommer::mmer()` fills a missing response with its median,
+which would swamp the few real observations of a sparse layer.

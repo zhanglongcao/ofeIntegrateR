@@ -1,0 +1,191 @@
+---
+title: "Worked examples"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Worked examples}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4)
+has_asreml <- requireNamespace("asreml", quietly = TRUE)
+```
+
+Four short recipes, each answering one question a trial team asks. They use
+simulated data so that the true answer is known and the output can be checked
+against it. `vignette("ofe-integration")` walks through the whole pipeline in
+more depth.
+
+```{r}
+library(ofeIntegrateR)
+```
+
+## 1. A strip trial with a yield map and nothing else
+
+*Question: what are the treatment means, and which differ?*
+
+A yield-monitor file needs cleaning and gridding before it can be modelled.
+Then the spatial model is fitted to the yield map alone. This is also the free
+baseline that any point-sampling campaign has to beat.
+
+```{r recipe1}
+ym <- simulate_yield_monitor(treat_effects = c(0, 0.4, 0.8), defects = TRUE,
+                             n_point_samples = 0, seed = 1)
+
+# 1. Remove the points the harvester recorded but did not measure
+clean <- clean_yield_monitor(ym$cloud, yield = "yield", pass = "pass",
+                             speed = "speed")
+attr(clean, "cleaning")
+
+# 2. Snap the cloud onto a lattice; drop cells that straddle two treatments
+g <- grid_dense_layer(clean, response = "yield", treat = "treat", cell_size = 9)
+g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
+
+# 3. Spatial model: treatment + AR1 x AR1 residual (no asreml licence needed)
+fit <- fit_ofe(yield ~ treat, data = g, residual = ~ ar1(row):ar1(col))
+wald_tests(fit)
+ofe_lsd(fit, "treat")
+```
+
+The true effects were 0, 0.4 and 0.8 relative to treatment A:
+
+```{r recipe1-check}
+ofe_means(fit, "treat", pairwise = TRUE)[, c("contrast", "estimate", "std.error")]
+```
+
+## 2. Planning a soil-sampling campaign
+
+*Question: how far apart should the cores be, and how many do we need?*
+
+A variogram from a reconnaissance survey, or from ancillary data, sets the
+sampling interval. `kriging_sample_interval()` finds the largest grid spacing
+at which kriging reaches a target precision.
+
+```{r recipe2}
+trial <- simulate_ofe_trial(n_row = 40, n_col = 24, point_range = 8,
+                            n_point_samples = 150, seed = 2)
+# Work in metres: here each grid cell is 10 m, so the trial is 240 m x 400 m
+recon <- transform(trial$point_samples, x = col * 10, y = row * 10)
+v <- ofe_variogram(recon, value = "point_obs", x = "x", y = "y")
+v$practical_range     # metres
+v$range_identified    # is the range inside the distances actually sampled?
+
+plan <- kriging_sample_interval(v, target_kse = 0.5, area_ha = 24 * 40 * 100 / 1e4)
+plan$interval         # metres between cores
+plan$n_samples
+plan$kse_floor
+```
+
+The interval and the area must be in the same units, so give the
+coordinates in metres before fitting the variogram.
+
+Treat a variogram from one field with caution. When the range is not small
+compared with the field, the range estimate varies a lot from one field to
+the next, and `range_identified` reports whether the fitted range falls
+inside the distances actually sampled.
+
+`kse_floor` is the best relative precision that any sampling effort can
+reach: at an unsampled location the nugget cannot be interpolated away. If the
+target is below the floor, no interval meets it.
+
+A note on units. In gstat, the `range` of an exponential model is a
+*parameter*, and the correlation falls to 5% at about three times that
+distance. `simulate_ofe_trial(point_range = 8)` therefore gives a practical
+range of about 24 cells. `ofe_variogram()` reports both (`range` and
+`practical_range`), and `kriging_sample_interval()` takes the practical range.
+
+Place the cores to cover the trial rather than in clusters:
+
+```{r recipe2-place}
+set.seed(2)
+cores <- place_point_samples(trial$grid, n = plan$n_samples, design = "grid")
+nrow(cores)
+```
+
+## 3. A sparse response with a dense covariate: hand cuts and NDVI
+
+*Question: we took four hand cuts per strip and flew NDVI over the whole
+trial. Can NDVI make the hand-cut comparison more precise?*
+
+This is where the joint bivariate model helps. The hand cuts and NDVI are
+fitted as two correlated traits, each with its own treatment effects, so the
+cuts borrow strength from NDVI through their residual correlation.
+
+```{r recipe3-data}
+p <- simulate_paddock(n_row = 24, n_col = 18, treatments = c("N0", "N60", "N120"),
+                      n_rep = 3, treat_effect = c(0, 0.3, 0.5), seed = 3)
+set.seed(3)
+# NDVI follows the yield potential of the paddock and also responds to N
+p$ndvi <- 0.55 + 0.06 * as.numeric(scale(p$yield_potential)) +
+  c(N0 = 0, N60 = 0.03, N120 = 0.05)[as.character(p$treat)] +
+  rnorm(nrow(p), 0, 0.02)
+# Four hand cuts per strip
+cuts <- do.call(rbind, lapply(split(p, p$plot), function(d) d[sample(nrow(d), 4), ]))
+cuts <- data.frame(row = cuts$row, col = cuts$col, rep = cuts$rep,
+                   treat = cuts$treat, cut_yield = cuts$yield,
+                   ndvi = cuts$ndvi)
+nrow(cuts)
+```
+
+The cuts alone (true N120 $-$ N0 effect: 0.5):
+
+```{r recipe3-alone}
+alone <- lm(cut_yield ~ factor(rep) + treat, data = cuts)
+summary(alone)$coefficients[c("treatN60", "treatN120"), 1:2]
+```
+
+With NDVI, through the joint model:
+
+```{r recipe3-joint, eval = has_asreml, warning = FALSE}
+joint <- fit_integrated_joint(p[, c("row", "col", "treat", "rep", "ndvi")],
+                              cuts[, c("row", "col", "cut_yield")],
+                              response_dense = "ndvi",
+                              response_point = "cut_yield", block = "rep")
+joint$converge
+fx <- extract_fixed_effects(joint)
+fx[grepl("cut_yield\\):treat_N", fx$term), ]
+```
+
+The joint model needs an ASReml-R licence when one layer is sparse. The
+open-source `sommer` engine fills missing responses with their median, which
+would swamp the cuts, so it is refused for a sparse layer.
+
+**What not to do.** NDVI responds to nitrogen, so entering it as an ordinary
+covariate removes part of the treatment effect being estimated:
+
+```{r recipe3-pitfall}
+wrong <- lm(cut_yield ~ factor(rep) + treat + ndvi, data = cuts)
+summary(wrong)$coefficients[c("treatN60", "treatN120"), 1:2]
+```
+
+The joint model avoids this because NDVI has its own treatment effects, so the
+cuts are conditioned only on NDVI's deviations from its treatment means.
+
+## 4. Check the pipeline against a known truth before trusting it
+
+*Question: does this analysis recover the effect on a paddock like ours?*
+
+Simulate a few paddocks with the structure you expect, run the same analysis,
+and see whether the intervals cover the true effect. Here the truth is an
+exponential field plus noise, while the model assumes AR1 $\times$ AR1, as it
+would in practice.
+
+```{r recipe4}
+check_one <- function(seed) {
+  p <- simulate_paddock(n_row = 20, n_col = 18, treatments = c("A", "B", "C"),
+                        n_rep = 3, treat_effect = c(0, 0.2, 0.4), seed = seed)
+  p$rep <- factor(p$rep)
+  f <- fit_ofe(yield ~ treat, random = ~ rep, data = p,
+               residual = ~ ar1(row):ar1(col))
+  ca <- subset(ofe_means(f, "treat", pairwise = TRUE), contrast == "C - A")
+  data.frame(seed = seed, estimate = ca$estimate, se = ca$std.error,
+             covers_truth = abs(ca$estimate - 0.4) <= 1.96 * ca$std.error)
+}
+do.call(rbind, lapply(1:5, check_one))
+```
+
+Five paddocks are enough to catch a gross problem. To estimate coverage or
+power, run a few hundred; `validation/validate.R` in the package source does
+this for the package's own functions.

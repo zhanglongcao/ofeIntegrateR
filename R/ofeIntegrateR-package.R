@@ -76,9 +76,11 @@
 #'     covariate in a spatial mixed model of the dense response. Pass
 #'     `covariate = NULL` for the dense-layer-only baseline the integrated fit
 #'     has to beat.}
-#'   \item{Joint bivariate model ([fit_integrated_joint()])}{Fit the dense
-#'     response and the point-source measurements jointly as two stacked
-#'     layers sharing a spatial random effect, with no separate kriging step.}
+#'   \item{Joint bivariate model ([fit_integrated_joint()])}{Fit the two
+#'     layers as correlated traits with an `ar1(row):ar1(col):us(trait)`
+#'     residual, with no separate kriging step. Built for a sparse response
+#'     (hand cuts, protein) alongside a dense auxiliary layer (NDVI, yield
+#'     monitor).}
 #' }
 #'
 #' [compare_integration()] fits the baseline and the integrated model together,

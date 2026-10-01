@@ -113,7 +113,10 @@ kriging_sample_interval <- function(nugget,
   # The nugget cannot be filtered at an unsampled point, so this is the best
   # any interval can do.
   kse_floor <- sqrt(nugget) / field_sd
-  vmod <- gstat::vgm(psill = psill, model = model, range = range,
+  # `range` is the practical range; gstat's `range` is the model parameter,
+  # which for Exp and Gau is a fraction of it (the inverse of .vgm_practical)
+  range_param <- switch(model, Exp = range / 3, Gau = range / sqrt(3), range)
+  vmod <- gstat::vgm(psill = psill, model = model, range = range_param,
                      nugget = nugget)
 
   # Four samples at the corners of a delta x delta cell, predicting the centre:

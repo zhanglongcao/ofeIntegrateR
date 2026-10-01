@@ -49,3 +49,17 @@ test_that("kriging_sample_interval validates its inputs", {
   expect_error(kriging_sample_interval(0.2, 0.8, range = 60, target_kse = 1.5),
                "between 0 and 1")
 })
+
+test_that("range is read as the practical range, not gstat's parameter", {
+  # Reproduce the design calculation by hand: four corner samples, predict the
+  # centre, with gstat's Exp range parameter = practical range / 3
+  s <- kriging_sample_interval(nugget = 0.2, psill = 1, range = 30,
+                               target_kse = 0.7)
+  d <- s$interval
+  corner <- data.frame(x = c(0, d, 0, d), y = c(0, 0, d, d), z = 0)
+  centre <- data.frame(x = d / 2, y = d / 2)
+  m <- gstat::vgm(psill = 1, model = "Exp", range = 10, nugget = 0.2)
+  kv <- gstat::krige(z ~ 1, locations = ~ x + y, data = corner,
+                     newdata = centre, model = m, debug.level = 0)$var1.var
+  expect_equal(s$rel_kse, sqrt(kv / 1.2), tolerance = 1e-6)
+})

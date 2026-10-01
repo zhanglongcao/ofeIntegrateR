@@ -162,13 +162,21 @@ residual structure other than `ar1(row):ar1(col)`, call `fit_ofe()` directly.
 `extract_fixed_effects()` returns the same tidy table whichever engine fitted
 the model.
 
-For the joint bivariate model, `fit_integrated_joint()` uses `asreml::asreml()`
-or the open-source `sommer::mmer()`.
+`fit_integrated_joint()` fits the two layers as correlated traits. With
+`asreml::asreml()` the residual is `ar1(row):ar1(col):us(trait)`. The
+open-source `sommer::mmer()` engine fits the non-spatial `units:us(trait)`, but
+only when both layers cover every cell, so a sparse layer needs asreml. It pays
+off when the *response* is the sparse layer (hand cuts or protein alongside
+NDVI or the yield monitor). For a dense response with a sparse covariate, use
+the kriged route.
 
 ## Articles
 
 * `vignette("ofe-integration")` — end to end on simulated trials, where the
   truth is known.
+* `vignette("worked-examples")` — four short recipes: a strip trial from the
+  yield map alone, planning a soil-sampling campaign, hand cuts with NDVI
+  through the joint model, and checking the pipeline against a known truth.
 * `vignette("real-data")` — the same workflow on `agridat::lasrosas.corn`, an
   on-farm nitrogen experiment recorded by a yield monitor, where the data
   arrive in the state real data arrive in.
