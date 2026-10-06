@@ -19,14 +19,14 @@ cat("This article needs the **agridat** package, which is not installed.",
     "Install it with `install.packages(\"agridat\")` to run the example.")
 ```
 
-The other article uses simulated trials, where the truth is known. This one uses
-a real one, where it is not — and where the data arrive in the state real data
-arrive in.
+The other articles use simulated trials, where the truth is known. This one
+uses a real trial, where it is not, and where the data arrive in the state real
+data arrive in.
 
-`agridat::lasrosas.corn` is an on-farm nitrogen experiment from Las Rosas,
-Córdoba, Argentina, recorded by a yield monitor. It has what this package is
-built for: GPS-referenced yield observations, a categorical treatment applied
-across the paddock, and an ancillary spatial layer.
+`agridat::lasrosas.corn` is an on-farm nitrogen strip trial from Las Rosas,
+Córdoba, Argentina, recorded by a yield monitor in 1999 and 2001. It has what
+this package is built for: GPS-referenced yield observations, a treatment
+applied in strips across the paddock, and an ancillary spatial layer.
 
 ```{r}
 library(ofeIntegrateR)
@@ -36,17 +36,21 @@ d <- subset(lasrosas.corn, year == 1999)
 str(d)
 ```
 
-`yield` is in quintals per hectare, `nf` is the nitrogen treatment (six levels),
-`bv` is a brightness value from aerial imagery, and `topo` is a topographic
-class.
+`yield` is in quintals per hectare, `nf` is the nitrogen rate (six levels),
+`rep` the replicate, `bv` a brightness value from aerial imagery (a proxy for
+soil organic matter), and `topo` one of four topographic zones.
 
-## Project the coordinates first
+## Project, then turn the field to face the strips
 
 `grid_dense_layer()` works in the units of the coordinates it is given, so
-degrees of latitude and longitude will produce meaningless cell sizes. Project
-to metres before gridding. A local equirectangular approximation is accurate
-enough over a single paddock; use a proper projection (`sf::st_transform()`) for
-anything larger.
+degrees of latitude and longitude would give meaningless cell sizes. Project to
+metres first. A local equirectangular approximation is accurate enough over a
+single paddock; use a proper projection (`sf::st_transform()`) for anything
+larger.
+
+The strips here run at an angle to north. A lattice laid along north and east
+would cut across them, so the coordinates are also rotated: `along` runs the
+length of the strips and `across` runs over them.
 
 ```{r}
 lat0 <- mean(d$lat)
@@ -54,154 +58,240 @@ lon0 <- mean(d$long)
 d$x <- (d$long - lon0) * 111320 * cos(lat0 * pi / 180)
 d$y <- (d$lat - lat0) * 110540
 
-round(c(width_m = diff(range(d$x)), height_m = diff(range(d$y))))
+pc <- prcomp(cbind(d$x, d$y))
+d$along  <- pc$x[, 1] - min(pc$x[, 1])
+d$across <- pc$x[, 2] - min(pc$x[, 2])
+
+round(c(length_m = diff(range(d$along)), width_m = diff(range(d$across))))
 nrow(d)
 ```
 
-About 1,700 yield observations over a 660 m × 240 m block.
+About 1,700 yield readings over a field about 650 m long and 115 m wide.
+
+## The layout: 18 strips, one harvester pass each
+
+```{r}
+strip <- interaction(d$nf, d$rep, drop = TRUE)
+strip_mid <- sort(tapply(d$across, strip, median))
+round(diff(strip_mid), 1)
+names(strip_mid)
+```
+
+Six nitrogen rates in three reps make 18 strips. Each strip is a single
+harvester pass, 6.7 m wide, running the full length of the field, and the same
+order of rates is used in every rep. This is what the grid has to respect.
 
 ## Choosing a cell size is a real decision
 
 The cell size trades two things against each other. Large cells average more
-yield observations, which suppresses monitor noise. Small cells are less likely
-to straddle a treatment boundary. `grid_dense_layer()` reports both sides of
-that trade-off, so it can be made on evidence rather than habit.
+yield readings, which suppresses monitor noise. Small cells are less likely to
+straddle a treatment boundary. `choose_cell_size()` reports both sides of that
+trade-off.
 
 ```{r}
-tab <- choose_cell_size(d, response = "yield", treat = "nf",
-                        sizes = c(5, 8, 10, 15, 20))
-tab
-c(recommended = attr(tab, "recommended"))
+choose_cell_size(d, x = "along", y = "across", response = "yield", treat = "nf",
+                 sizes = c(4, 5, 6, 8, 10))
 ```
 
 `pure` is the share of occupied cells lying wholly inside one nitrogen rate. It
-falls as cells grow, because a bigger cell is more likely to span a boundary,
-while `median_obs` rises. That is the whole trade, and it is specific to this
-trial's geometry rather than something a convention can settle.
+stays at 1 up to 6 m and collapses beyond that, because a cell wider than one
+6.7 m strip must straddle two. `median_obs` stays at one reading per cell
+throughout: this 1999 monitor logged a reading about every 6.7 m along a pass.
+No size gives both several readings per cell and pure cells, and the warning
+says so. That is a property of the data, not something a setting can fix.
 
-**No size qualifies, and the warning is the finding.** The monitor logged 1738
-points over the whole field, so cells still hold a median of one observation at
-8 m, and by the time they hold three the plots are being straddled and purity
-has collapsed to 0.11. There is no cell size at which this dataset gives both
-well-supported and treatment-pure cells; a 2001 monitor simply did not log fast
-enough.
-
-Relaxing the floor until something passes would only hide that. Dropping
-`min_obs` to 1 makes 5 m "qualify", but at 5 m every occupied cell holds exactly
-one point and gridding has done nothing except rename the observations.
-
-So 8 m is used below as a deliberate compromise rather than a recommendation:
-it is close to the swath width, keeps purity at 0.81, and doubles coverage over
-5 m. The consequence travels with it -- cell means resting on one or two pings
-are noisier than a modern monitor's would be, so the dense layer is weaker here
-than the method assumes, and the baseline model has less to work with.
-
-The collapse in purity above 8 m is informative: it says the treatment units in
-this trial are narrow. They are — all six nitrogen levels appear across the full
-extent of the block, so this is a randomised trial in small plots rather than a
-strip trial with wide contiguous strips.
-
-That points to a cell size of 5–8 m. We take 8 m and exclude the cells that
-still straddle a boundary.
+The natural lattice for a strip trial puts one row of cells on each strip. With
+cells 6.7 m square, centred on the passes, each lattice row is one strip.
 
 ```{r}
-g <- grid_dense_layer(d, x = "x", y = "y", response = "yield", treat = "nf",
-                      cell_size = 8)
+d$across <- d$across - strip_mid[1] + 6.7 / 2    # centre the first pass in a cell
 
-# Carry the brightness layer onto the same lattice
-gb <- grid_dense_layer(d, x = "x", y = "y", response = "bv", cell_size = 8)
+g  <- grid_dense_layer(d, x = "along", y = "across", response = "yield",
+                       treat = "nf", cell_size = 6.7)
+gb <- grid_dense_layer(d, x = "along", y = "across", response = "bv",
+                       cell_size = 6.7)
 g$bv <- gb$bv[match(paste(g$row, g$col), paste(gb$row, gb$col))]
 
-# Exclude ambiguous cells, keeping the lattice complete
-g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
-
-c(cells = nrow(g), usable = sum(!is.na(g$yield)))
+c(rows = max(g$row), cols = max(g$col), cells = nrow(g),
+  with_yield = sum(!is.na(g$yield)))
 ```
 
-## Standing in for a sparse sampling campaign
-
-This trial has no soil-core layer — `bv` was measured everywhere. To show the
-integration workflow we treat it as if it had been *sampled* at forty locations,
-the kind of budget a soil-coring campaign would have. This is a demonstration
-device: the surface being kriged is real, but the sparsity is imposed.
+Cells with no reading have no treatment label, but every row is a single strip,
+so they take the rate of their row. Their yield stays missing; the label only
+keeps the lattice complete for the spatial model.
 
 ```{r}
-obs <- which(!is.na(g$bv) & !is.na(g$yield))
-s <- sample(obs, 40)
+for (r in unique(g$row)) {
+  in_row <- g$row == r
+  g$nf[in_row & is.na(g$nf)] <- names(which.max(table(g$nf[in_row])))
+}
+g$yield[!is.na(g$treat_purity) & g$treat_purity < 0.8] <- NA
+table(g$nf)
+```
 
-cores <- data.frame(x = g$x_centre[s], y = g$y_centre[s], bv_obs = g$bv[s])
+## Standing in for a coring campaign
 
+This trial has no soil cores: `bv` was measured everywhere. To show the
+integration workflow we treat it as if it had been *sampled* at twelve
+locations, which is what a trial team can typically afford. Growers often take a
+core at each end of a strip, so we take one core near each end of one strip per
+nitrogen rate. The surface being kriged is real; the sparsity is imposed.
+
+```{r}
+can_core <- which(!is.na(g$bv))
+idx <- c()
+for (lev in levels(g$nf)) {
+  rows_lev <- unique(g$row[g$nf == lev])
+  r <- rows_lev[sample(length(rows_lev), 1)]
+  cells <- can_core[g$row[can_core] == r]
+  lo <- cells[g$x_centre[cells] <= quantile(g$x_centre[cells], 0.10)]
+  hi <- cells[g$x_centre[cells] >= quantile(g$x_centre[cells], 0.90)]
+  idx <- c(idx, lo[sample(length(lo), 1)], hi[sample(length(hi), 1)])
+}
+
+cores <- data.frame(x = g$x_centre[idx], y = g$y_centre[idx], bv_obs = g$bv[idx])
 g$x <- g$x_centre
 g$y <- g$y_centre
 kr <- krige_point_samples(cores, g, value = "bv_obs", coords = c("x", "y"))
 ```
 
-Is forty enough to reconstruct the surface?
+Are twelve cores enough to reconstruct the surface?
 
 ```{r}
 cv <- cv_krige_surface(cores, value = "bv_obs", coords = c("x", "y"))
 round(c(rmse = cv$rmse, r2 = cv$r2), 2)
 ```
 
-A positive `r2` means kriging beats the sample mean, so the layer is worth
-carrying forward. Recall that this says the surface is *well estimated*, not
-that it is *relevant to yield*.
+A positive `r2` would mean kriging beats simply using the average of the
+cores. Here it is `r round(cv$r2, 2)`: `r if (cv$r2 > 0) "the cores do reconstruct some of the surface" else "twelve cores bunched at the two ends of the field cannot reconstruct the surface in between, and the kriged map is worse than a flat average"`.
+Even a positive value would only say the surface is *estimated*, not that it is
+*relevant to yield*.
 
 ## Baseline against integrated
 
 ```{r}
 cmp <- compare_integration(kr, response = "yield", treat = "nf",
                            covariate = "bv_obs_kriged")
-
 cmp[grepl("^nf|bv", cmp$term), ]
 ```
 
-Two things to read here.
+The nitrogen response is clear in both models: the contrasts rise from N1 to N5,
+recovered from irregular yield-monitor data that started as a GPS point cloud.
 
-**The nitrogen response is clean.** The contrasts rise monotonically from N1 to
-N5 — a textbook response curve, recovered from irregular yield-monitor data that
-started as a GPS point cloud.
+It is tempting to read `se_change` as the value of the cores. Resist it. The
+two models estimate their own spatial correlation, and a smooth kriged
+covariate changes what the residual structure has left to explain, so the
+reported standard errors can shrink or grow for reasons that have nothing to do
+with accuracy. Here they shrank even though the twelve cores could not
+reconstruct the soil surface at all. In the analysis behind the table below,
+repeating the twelve-core draw gave standard errors that moved up and down from
+one draw to the next, sometimes below those from the full `bv` survey, which no
+twelve cores can genuinely beat. Comparing standard errors from two different
+models is not a reliable score.
 
-**Integration bought a real gain.** `se_change` is negative throughout, worth
-between 6 and 11 per cent of the standard error. On this trial the forty-point
-brightness surface did improve the treatment estimates.
+## Scoring against a known answer
 
-## The baseline is only as strong as the model you give it
+A fairer test keeps the real field but puts back a known answer:
 
-That second conclusion depends on which residual structure the comparison was
-run under, and it is worth seeing why. Fit the same baseline — no covariate —
-with the exponential-correlation engine instead, and compare the standard
-errors it reports:
+1. Fit the trial once with `bv` from the full survey and subtract the estimated
+   nitrogen effects from every yield value. What remains is the real yield
+   pattern and the real link between `bv` and yield.
+2. Randomly reassign the six rates to the six strips within each rep, and add
+   known effects back.
+3. Analyse the result with and without the cores, and score each estimate
+   against the known effects.
 
-```{r}
-base_gls <- fit_integrated_kriged(kr, response = "yield", treat = "nf",
-                                  covariate = NULL, engine = "gls")
-se <- data.frame(
-  ar1 = cmp$baseline_se[grepl("^nf", cmp$term)],
-  gls = extract_fixed_effects(base_gls)$se[-1]
-)
-round(cbind(se, ratio = se$gls / se$ar1), 3)
+One round looks like this (not run here, because repeating it hundreds of times
+takes a while):
+
+```{r, eval = FALSE}
+# step 1: remove the estimated N effects (bv from the full survey)
+full <- krige_point_samples(d[, c("along", "across", "bv")],
+                            transform(g, along = x_centre, across = y_centre),
+                            value = "bv", coords = c("along", "across"))
+fit_ref <- fit_integrated_kriged(full, response = "yield", treat = "nf",
+                                 covariate = "bv_kriged")
+fx  <- extract_fixed_effects(fit_ref)
+tau <- c(0, fx$estimate[grepl("^nf", fx$term)])
+names(tau) <- levels(g$nf)
+g$yield0 <- g$yield - tau[as.character(g$nf)]
+
+# step 2: a new random layout within each rep, known effects added back
+rep_of_row <- tapply(as.character(d$rep),
+                     floor((d$across - min(d$across)) / 6.7) + 1,   # = g$row
+                     function(z) z[1])
+new_nf <- character(max(g$row))
+for (r in unique(rep_of_row)) {
+  rows_r <- as.integer(names(rep_of_row)[rep_of_row == r])
+  new_nf[rows_r] <- sample(levels(g$nf), length(rows_r))
+}
+g$nf_k    <- factor(new_nf[g$row], levels = levels(g$nf))
+g$yield_k <- g$yield0 + tau[as.character(g$nf_k)]
+
+# step 3: analyse with and without the cores, score against tau
+kr$nf_k <- g$nf_k
+kr$yield_k <- g$yield_k
+base <- fit_integrated_kriged(g,  response = "yield_k", treat = "nf_k")
+with <- fit_integrated_kriged(kr, response = "yield_k", treat = "nf_k",
+                              covariate = "bv_obs_kriged")
+err <- function(m) {
+  fx <- extract_fixed_effects(m)
+  mean(abs(fx$estimate[grepl("^nf_k", fx$term)] - tau[-1]))
+}
+c(baseline = err(base), with_cores = err(with))
 ```
 
-The exponential fit reports standard errors around half the size. On this
-irregular, gappy lattice it does not absorb as much of the spatial structure,
-so what it fails to model stays in the fit as apparent precision. Run
-`compare_integration()` under that baseline and integration looks worthless —
-not because the covariate stopped helping, but because an over-confident
-baseline leaves nothing visible to improve on.
+The package ships the result of 200 rounds per year, computed this way (with
+rep as a fixed effect, a lattice of 10 m cells along each strip, and
+ASReml-R), together with 12 random cores, 30 random cores, the full `bv` survey
+and the four topographic zones for comparison:
 
-The lesson is not that one engine is right and the other wrong, but that
-"integration did not help" is a claim about a *pair* of models. Before
-concluding a covariate was not worth collecting, check that the baseline it was
-judged against was itself well specified — `plot()` on the baseline fit, and its
-residual variogram in particular, is the quickest way to see whether it was.
+```{r}
+known <- read.csv(system.file("extdata", "lasrosas_known_answer.csv",
+                              package = "ofeIntegrateR"))
+known
+```
+
+`median_error` is the typical error in the five N-vs-N0 effects (q/ha),
+`change` is relative to no soil information (negative is better), and
+`better_than_none` is the share of rounds in which the analysis beat the one
+with no soil information.
+
+```{r, include = FALSE}
+k99 <- known[known$year == 1999, ]
+k01 <- known[known$year == 2001, ]
+cores_rows <- grepl("cores", known$analysis)
+pct <- function(x) paste0(round(100 * x), "%")
+```
+
+Three things stand out:
+
+- **A dozen cores did little.** In 1999 they changed the error by
+  `r pct(min(k99$change[grepl("cores", k99$analysis)]))` to
+  `r pct(max(k99$change[grepl("cores", k99$analysis)]))`; in 2001 they made it
+  slightly worse. They beat no soil information in only
+  `r pct(min(known$better_than_none[cores_rows]))`--`r pct(max(known$better_than_none[cores_rows]))`
+  of rounds.
+- **Even the full survey added modestly.** Complete `bv` coverage cut the error
+  by `r pct(-k99$change[k99$analysis == "Full bv survey"])` in 1999 and
+  `r pct(-k01$change[k01$analysis == "Full bv survey"])` in 2001. Each strip runs
+  the full length of the field and crosses every kind of soil, and the spatial
+  model absorbs most of what is left, so the treatment comparison is already well
+  protected.
+- **Free zones were no substitute.** The topographic zones helped in 1999 and
+  hurt in 2001.
+
+This is one field and two seasons, and `bv` is only a proxy for soil, so treat
+it as an illustration rather than a rule. It does show why the simulation
+results in the other articles should be read as a best case.
 
 ## What to take from this
 
-- Project your coordinates before gridding.
+- Project your coordinates, and align the lattice with the strips before
+  gridding.
 - Choose the cell size from `n_obs` and `treat_purity`, not from convention.
-  Their trade-off is specific to your trial's plot geometry.
-- Expect integration to help when the baseline is weak, and to do little when it
-  is already strong. Report both so the difference is visible.
-- "Integration did not help" is a statement about two models, not one. Check the
-  baseline is well specified before believing it.
+  For a strip trial, one row of cells per strip is the natural choice.
+- A handful of cores rarely sharpens a strip-trial estimate much, even when the
+  soil layer is strongly related to yield.
+- Do not judge a covariate by comparing standard errors from two models; score
+  it against a known answer where you can.

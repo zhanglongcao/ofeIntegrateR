@@ -53,12 +53,16 @@ number of samples fixes the cost, so this function answers the complementary
 question: given that budget, where should the cores go?
 }
 \details{
-Simulation work for the AAGI-CU-RD-OFE project found that spreading samples
-over the trial beats both simple random placement and clustered placement
-when the samples are there to build a covariate surface, though the effect is
-second-order next to the sample count. Clustered \code{"nested"} designs
-concentrate pairs at short lags, which is what identifies a variogram range;
-they are a reconnaissance tool and are a poor choice for interpolation.
+Simulation work for the AAGI-CU-RD-OFE project found that a \code{"grid"} or
+\code{"stratified"} draw beats simple random placement slightly when the samples
+are there to build a covariate surface; the effect is second-order next to
+the sample count. Clustered \code{"nested"} designs concentrate pairs at short
+lags, which is what identifies a variogram range. With very few samples
+(around 15) their clusters leave much of the trial uncovered and they do
+worse than random placement; from about 30 samples they performed on a par
+with it. A regular \code{"grid"} has no short-distance pairs, so it identifies the
+variogram range poorly; take the range from a reconnaissance survey or prior
+data when the samples are on a grid.
 }
 \examples{
 sim <- simulate_ofe_trial(n_row = 20, n_col = 12, n_point_samples = 5, seed = 1)

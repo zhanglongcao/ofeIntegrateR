@@ -43,13 +43,17 @@ sapply(c("random", "grid", "stratified", "nested"),
 Higher numbers mean samples are further apart. Two points follow from the
 simulation work behind this package:
 
-- **Spread beats clustering when the samples will build a covariate surface.**
-  A systematic `"grid"` or a `"stratified"` draw beats simple random placement,
-  though the margin is second-order next to the sample count.
-- **`"nested"` is a reconnaissance design, not an interpolation design.** It
-  concentrates pairs at short lags, which is what identifies a variogram range.
-  Reusing that geometry for the integration sample leaves much of the trial far
-  from any observation and produces a worse covariate surface for the same money.
+- **Placement is second-order next to the sample count.** A systematic
+  `"grid"` or a `"stratified"` draw beats simple random placement, but only
+  slightly.
+- **`"nested"` is poor only with very few samples.** It concentrates pairs at
+  short lags, which is what identifies a variogram range. With around 15
+  samples its clusters leave much of the trial far from any observation and it
+  does worse than random placement; from about 30 samples it performed on a par
+  with it.
+- **A `"grid"` cannot identify the variogram range on its own.** It has no
+  short-distance pairs, so take the range from a reconnaissance survey or prior
+  data when the integration samples are on a grid.
 
 ## The dense layer, as a real trial produces it
 

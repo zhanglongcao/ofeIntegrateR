@@ -1,0 +1,13 @@
+"year","analysis","rounds","median_error","change","better_than_none"
+1999,"No soil information",200,0.794,NA,NA
+1999,"12 cores at strip ends",200,0.769,-0.031,0.59
+1999,"12 random cores",200,0.772,-0.028,0.595
+1999,"30 random cores",200,0.755,-0.049,0.545
+1999,"Full bv survey",200,0.664,-0.164,0.835
+1999,"Topographic zones",200,0.729,-0.082,0.745
+2001,"No soil information",200,0.597,NA,NA
+2001,"12 cores at strip ends",200,0.618,0.035,0.495
+2001,"12 random cores",200,0.639,0.069,0.445
+2001,"30 random cores",200,0.603,0.01,0.555
+2001,"Full bv survey",200,0.581,-0.028,0.575
+2001,"Topographic zones",200,0.675,0.13,0.405

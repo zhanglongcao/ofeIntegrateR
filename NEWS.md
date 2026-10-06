@@ -2,6 +2,32 @@
 
 First release.
 
+## Documentation
+
+* The real-data article on `agridat::lasrosas.corn` described the trial as
+  randomised small plots. It is a strip trial: six nitrogen rates in three reps
+  make 18 strips, each one harvester pass (6.7 m) wide and running the full
+  ~650 m of the field. The article now rotates the coordinates to face the
+  strips and lays one row of cells on each strip, which keeps every cell inside
+  one treatment. It samples 12 cores, the budget a trial team can typically
+  afford, instead of 40.
+
+* The same article no longer reads a fall in standard error as the value of the
+  cores: the two models estimate their own spatial correlation, so their
+  standard errors are not comparable. It now scores the cores against a known
+  answer (the real field with known nitrogen effects put back in, 200
+  re-randomised layouts per year). A dozen cores changed the error by -5% to
+  +7%, and even the complete brightness survey by only -16% to -3%. The results
+  ship as `inst/extdata/lasrosas_known_answer.csv`.
+
+* `place_point_samples()` and the integration article said clustered
+  `"nested"` placement is a poor choice for interpolation. That rested on a
+  project simulation whose nested design put every cluster centre in one column
+  of the trial. With the centres spread out, nested placement is worse than
+  random only with very few samples (around 15) and on a par with it from about
+  30. The documentation also now notes that a regular `"grid"` identifies the
+  variogram range poorly.
+
 ## New features
 
 * `simulate_paddock()` builds a paddock whose truth is known, which the package

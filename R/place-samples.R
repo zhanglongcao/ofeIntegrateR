@@ -4,12 +4,16 @@
 #' number of samples fixes the cost, so this function answers the complementary
 #' question: given that budget, where should the cores go?
 #'
-#' Simulation work for the AAGI-CU-RD-OFE project found that spreading samples
-#' over the trial beats both simple random placement and clustered placement
-#' when the samples are there to build a covariate surface, though the effect is
-#' second-order next to the sample count. Clustered `"nested"` designs
-#' concentrate pairs at short lags, which is what identifies a variogram range;
-#' they are a reconnaissance tool and are a poor choice for interpolation.
+#' Simulation work for the AAGI-CU-RD-OFE project found that a `"grid"` or
+#' `"stratified"` draw beats simple random placement slightly when the samples
+#' are there to build a covariate surface; the effect is second-order next to
+#' the sample count. Clustered `"nested"` designs concentrate pairs at short
+#' lags, which is what identifies a variogram range. With very few samples
+#' (around 15) their clusters leave much of the trial uncovered and they do
+#' worse than random placement; from about 30 samples they performed on a par
+#' with it. A regular `"grid"` has no short-distance pairs, so it identifies the
+#' variogram range poorly; take the range from a reconnaissance survey or prior
+#' data when the samples are on a grid.
 #'
 #' @param grid Data frame of candidate locations, typically the output of
 #'   [grid_dense_layer()] or the `grid` element of [simulate_ofe_trial()].
