@@ -1,3 +1,30 @@
+# ofeIntegrateR 0.2.0
+
+## New features: hand counts in strip trials
+
+From the AAGI-CU-RD-OFE Milestone 5 study of crop variables measured after
+treatment (plant establishment, weed counts, disease incidence):
+
+* `place_count_stations()` lays out sampling stations in every plot of a
+  `make_trial_design()` layout: evenly spaced along the plot between end
+  buffers, at the same positions in every plot, with quadrats kept clear of the
+  plot sides. `plot()` draws the plan.
+
+* `count_precision()` simulates strips with a known mean and reports the 95%
+  margin of the strip mean for a sampling design; `count_sample_size()` finds
+  the fewest stations for a target margin. Presets for wheat/barley, canola and
+  weeds were set from public establishment trials (University of Adelaide,
+  GRDC UOA1803-009RTX, CC BY 4.0), with low/central/high patchiness; the
+  weeds preset is calibrated to black-grass surveys of 200 commercial fields
+  (Goodsell et al. 2023, CC0).
+
+* `analyse_strip_counts()` compares treatments from quadrat counts with one
+  mean per strip (log scale, replicate blocks), giving treatment ratios with
+  confidence intervals; optional before/after counts at pegged quadrats.
+  Quadrats are never treated as replicates.
+
+* New article `vignette("crop-counts")`.
+
 # ofeIntegrateR 0.1.0
 
 First release.

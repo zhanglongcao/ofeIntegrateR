@@ -23,6 +23,8 @@ Documentation: <https://www.zcao.space/ofeIntegrateR/>
 | Lay out the trial: strip or stacked, randomised or systematic | `make_trial_design()` |
 | Work out how many cores a target precision needs | `kriging_sample_interval()` |
 | Decide where the cores go | `place_point_samples()` |
+| Plan hand counts (establishment, weeds, disease) in each strip | `place_count_stations()` |
+| Work out how many counts a strip needs | `count_precision()`, `count_sample_size()` |
 | Clean the raw yield-monitor file | `clean_yield_monitor()` |
 | Pick a cell size from the data rather than by convention | `choose_cell_size()` |
 | Get irregular yield-monitor data onto an estimable lattice | `grid_dense_layer()` |
@@ -34,6 +36,7 @@ Documentation: <https://www.zcao.space/ofeIntegrateR/>
 | Fit the spatial mixed model | `fit_ofe()` |
 | Test the terms; get means, contrasts and LSD letters | `wald_tests()`, `ofe_means()`, `ofe_lsd()` |
 | Compare the integrated fit against the free baseline | `compare_integration()` |
+| Compare treatments from hand counts, one mean per strip | `analyse_strip_counts()` |
 | Map anything; diagnose the fit | `ofe_map()`, `plot()` |
 
 Three simulators make test data: `simulate_paddock()` for a paddock whose truth
@@ -177,6 +180,8 @@ the kriged route.
 * `vignette("worked-examples")` — four short recipes: a strip trial from the
   yield map alone, planning a soil-sampling campaign, hand cuts with NDVI
   through the joint model, and checking the pipeline against a known truth.
+* `vignette("crop-counts")` — sampling plant establishment, weed and disease
+  counts in strips: how many, where, and how to analyse them.
 * `vignette("real-data")` — the same workflow on `agridat::lasrosas.corn`, an
   on-farm nitrogen experiment recorded by a yield monitor, where the data
   arrive in the state real data arrive in.

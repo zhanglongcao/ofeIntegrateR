@@ -1,0 +1,134 @@
+---
+title: "Sampling crop counts in strip trials"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sampling crop counts in strip trials}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 5)
+```
+
+Plant establishment counts, weed counts and disease scores are measured by hand
+at a few places in each strip, after the treatment has been applied. They are
+responses, not covariates: each strip is the experimental unit, and the counts
+estimate its mean. This article answers the questions a trial team asks before
+going out with a quadrat:
+
+1. How many counts per strip, and how large a quadrat?
+2. Where in the strip?
+3. How should the counts be analysed?
+
+The answers come from the AAGI-CU-RD-OFE Milestone 5 study (simulated
+250 m x 12 m strips, with the variation set from public establishment trials).
+
+```{r}
+library(ofeIntegrateR)
+```
+
+## 1. How many counts?
+
+`count_precision()` simulates strips with a known mean and counts them. The
+**95% margin** is how close the counted strip mean comes to the truth in 95%
+of strips.
+
+```{r}
+count_precision(n_stations = c(5, 8, 12), n_quadrats = 2, quadrat_area = 0.25,
+                crop = "wheat", n_sim = 200, seed = 1)
+```
+
+For wheat or barley, 8 stations x 2 quadrats of 0.25 m^2 (1 m of row at 25 cm)
+gives the strip mean to within about +/-13--15%. Canola has fewer plants per
+m^2 and needs about twice the counted area:
+
+```{r}
+count_precision(n_stations = 8, n_quadrats = 4, quadrat_area = 0.5,
+                crop = "canola", n_sim = 200, seed = 1)
+```
+
+Weeds are patchy, so even many quadrats leave a wide margin:
+
+```{r}
+count_precision(n_stations = c(12, 20), n_quadrats = 4, quadrat_area = 1,
+                crop = "weeds", n_sim = 200, seed = 1)
+```
+
+The patchiness of a strip is not known in advance. The presets cover the range
+of the public data: `patchiness = "low"` (research plots) to `"high"`
+(commercial seeder runs). In a patchy paddock, add stations:
+
+```{r}
+count_precision(n_stations = c(8, 12), n_quadrats = 2, quadrat_area = 0.25,
+                crop = "wheat", patchiness = "high", n_sim = 200, seed = 1)
+```
+
+`count_sample_size()` turns a target into a design:
+
+```{r}
+count_sample_size(0.10, crop = "wheat", n_quadrats = 4, quadrat_area = 0.25,
+                  max_stations = 20, n_sim = 200, seed = 1)
+```
+
+For the same number of quadrats, spreading them over more stations is as good
+or better than more quadrats per station, especially for weeds.
+
+## 2. Where?
+
+`place_count_stations()` puts evenly spaced stations along every plot of a
+trial layout, at the same positions in each plot, with buffers at the ends and
+sides. The defaults (20 m and 2 m) avoid headland effects, the build-up of a
+treatment at the start of a run, and spill-over from the neighbouring strip.
+
+```{r}
+d <- make_trial_design(c("Control", "High rate"), n_rep = 4,
+                       plot_width = 12, plot_length = 250, cell_size = 12,
+                       seed = 1)
+st <- place_count_stations(d, n_stations = 8, n_quadrats = 2, seed = 1)
+head(st)
+plot(st)
+```
+
+The coordinates (`x`, `y`) can be loaded into a GPS or a field app. Counting
+only near the end where the strip is entered doubled the error in the
+simulations, and did the same on 7700 real 260 m transects of commercial fields
+surveyed for black-grass, because weed patches there extend over 100--150 m.
+
+## 3. Analyse strip means, not quadrats
+
+`analyse_strip_counts()` pools the counts in each strip and compares
+treatments on the log scale with replicate blocks. Here are counts simulated
+for the plan above, with a 20% higher establishment under the high rate and
+some strip-to-strip variation:
+
+```{r}
+set.seed(2)
+strip_eff <- exp(rnorm(8, 0, 0.1))
+true_dens <- 120 * ifelse(st$treat == "High rate", 1.2, 1) * strip_eff[st$plot]
+st$count <- rpois(nrow(st), true_dens * 0.25)
+fit <- analyse_strip_counts(st, count = "count", strip = "plot",
+                            treat = "treat", block = "rep", area = 0.25)
+fit
+```
+
+The test has 3 degrees of freedom (4 replicates), whatever the number of
+quadrats. Treating the 128 quadrats as replicates instead would ignore that
+quadrats in one strip share its seeder pass: in the Milestone 5 simulations
+that produced "significant" differences in up to 70% of trials with no
+treatment effect.
+
+For weeds and disease, count the same pegged quadrats before and after the
+treatment and pass the earlier counts as `baseline`; the response is then the
+change in each strip, which removes most of the patchiness.
+
+## What strip trials can and cannot show
+
+The counts above describe each strip well. Whether a *treatment difference* in
+establishment can be detected depends mostly on the number of replicate strips
+and on how consistently the seeder sows from one pass to the next. In the
+Milestone 5 simulations a 20% difference in wheat establishment was detected in
+only about half of trials with 8 replicates; large weed and disease effects
+(50% fewer weeds) were detected reliably with 4--6 replicates. If a 10--20%
+difference in establishment matters, a small-plot trial is the better tool.

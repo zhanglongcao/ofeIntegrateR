@@ -1,6 +1,6 @@
 Package: ofeIntegrateR
 Title: Design, Sample and Analyse On-Farm Strip Experiments
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Zhanglong", "Cao", , "zhanglong.cao@curtin.edu.au", role = c("aut", "cre"))
 Description: A workflow for on-farm experimentation (OFE) strip trials,
@@ -15,7 +15,9 @@ Description: A workflow for on-farm experimentation (OFE) strip trials,
     commercial licence. Reports predicted treatment means with least
     significant differences and compact letter displays. Sparse point-source variables (soil cores, tissue
     tests) can be integrated with the dense layer by a kriged covariate or a
-    joint bivariate spatial model. 'ASReml-R' is used automatically where it
+    joint bivariate spatial model. Plans and analyses hand counts (crop
+    establishment, weeds, disease) with one mean per strip. 'ASReml-R' is used
+    automatically where it
     is licensed. Developed for the AAGI-CU-RD-OFE GRDC project.
 License: MIT + file LICENSE
 Encoding: UTF-8

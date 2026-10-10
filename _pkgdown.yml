@@ -25,6 +25,17 @@ reference:
   - kriging_sample_interval
   - place_point_samples
 
+- title: Planning hand counts
+  desc: >
+    Crop establishment, weed and disease counts are responses measured in each
+    strip: how many to take, where, and how to compare treatments with them.
+  contents:
+  - place_count_stations
+  - plot.ofe_stations
+  - count_precision
+  - count_sample_size
+  - analyse_strip_counts
+
 - title: Cleaning the raw file
   desc: >
     What a harvester records but did not really measure. Run before anything
@@ -120,4 +131,5 @@ articles:
   contents:
   - ofe-integration
   - worked-examples
+  - crop-counts
   - real-data
