@@ -97,7 +97,9 @@ krige_point_samples <- function(point_data,
       }
     ),
     warning = function(w) {
-      if (grepl("No convergence", conditionMessage(w), fixed = TRUE)) {
+      msg <- conditionMessage(w)
+      if (grepl("No convergence", msg, fixed = TRUE) ||
+          grepl("singular model", msg, fixed = TRUE)) {
         converged <<- FALSE
         invokeRestart("muffleWarning")
       }
@@ -108,8 +110,13 @@ krige_point_samples <- function(point_data,
   # something wrong -- and on small point sets it declines often enough that a
   # message on every call would be noise. Which fit was used is recorded on the
   # result instead, so it stays inspectable.
+  # A singular fit can also come back with a negative range, which
+  # gstat::krige() then refuses ("variogram range can never be negative"), so
+  # the range of the structured component is checked as well as the sills.
+  struct <- vgm_fit$model != "Nug"
   refined <- converged && all(is.finite(vgm_fit$psill)) &&
-    all(vgm_fit$psill >= 0)
+    all(vgm_fit$psill >= 0) && all(is.finite(vgm_fit$range[struct])) &&
+    all(vgm_fit$range[struct] > 0)
   if (!refined) vgm_fit <- vgm_start
 
   newdata_sp <- newdata

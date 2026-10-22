@@ -1,3 +1,15 @@
+# ofeIntegrateR (development version)
+
+## Bug fixes
+
+* `krige_point_samples()` no longer stops with "variogram range can never be
+  negative". On clustered or very small samples `gstat::fit.variogram()` can
+  return a singular fit with a negative range; this is now treated as a failed
+  refinement and the package's constrained fit is used, as for a fit that does
+  not converge (`attr(, "variogram_source")` records it). Found when checking
+  sampling designs on real EM survey and yield maps, where about 0.6% of
+  draws hit it, most often with nested (clustered) designs.
+
 # ofeIntegrateR 0.2.0
 
 ## New features: hand counts in strip trials
